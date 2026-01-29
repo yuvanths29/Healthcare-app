@@ -65,6 +65,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _onLogin(),
                 ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.go('/reset-password'),
+                    child: const Text(
+                      'Forgot password?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF14b8a6),
+                      ),
+                    ),
+                  ),
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: 6),
                   Text(

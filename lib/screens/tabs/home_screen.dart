@@ -56,21 +56,46 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome back,',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                          ),
+                    InkWell(
+                      onTap: () => context.go('/profile'),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back,',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              session?.name ?? 'User',
+                              style: theme.textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              session?.email ?? '',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 13,
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.9),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              session?.userId ?? '',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          session?.name ?? 'User',
-                          style: theme.textTheme.titleLarge,
-                        ),
-                      ],
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(

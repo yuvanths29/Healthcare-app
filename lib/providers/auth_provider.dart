@@ -64,7 +64,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
         },
       );
       state = AsyncValue.data(session);
-    } catch (e, stack) {
+    } catch (e) {
       print('Auth error: $e');
       // On error, set state to null instead of error to allow app to continue
       state = const AsyncValue.data(null);
