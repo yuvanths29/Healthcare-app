@@ -6,6 +6,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/tabs/donation_screen.dart';
 import 'screens/tabs/family_member_screen.dart';
 import 'screens/tabs/family_screen.dart';
 import 'screens/tabs/home_screen.dart';
@@ -80,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/scan',
             builder: (context, state) => const ScanScreen(),
+          ),
+          GoRoute(
+            path: '/donation',
+            builder: (context, state) => const DonationScreen(),
           ),
           GoRoute(
             path: '/profile',

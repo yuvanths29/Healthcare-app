@@ -64,9 +64,15 @@ class TabsScreen extends StatelessWidget {
                   onTap: () => context.go('/scan'),
                 ),
                 _NavBarItem(
+                  icon: Icons.bloodtype,
+                  label: 'Donate',
+                  isSelected: _getCurrentIndex(context) == 3,
+                  onTap: () => context.go('/donation'),
+                ),
+                _NavBarItem(
                   icon: Icons.person,
                   label: 'Profile',
-                  isSelected: _getCurrentIndex(context) == 3,
+                  isSelected: _getCurrentIndex(context) == 4,
                   onTap: () => context.go('/profile'),
                 ),
               ],
@@ -82,7 +88,8 @@ class TabsScreen extends StatelessWidget {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/family')) return 1;
     if (location.startsWith('/scan')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/donation')) return 3;
+    if (location.startsWith('/profile')) return 4;
     return 0;
   }
 }
