@@ -77,20 +77,22 @@ lib/
 │   └── family_member.dart
 ├── providers/                 # Riverpod providers
 │   ├── auth_provider.dart
-│   ├── theme_provider.dart
-│   └── family_provider.dart
+│   ├── family_provider.dart
+│   └── theme_provider.dart
 ├── screens/                   # Screen widgets
 │   ├── splash_screen.dart
 │   ├── auth/
 │   │   ├── login_screen.dart
-│   │   └── signup_screen.dart
+│   │   ├── signup_screen.dart
+│   │   └── reset_password_screen.dart
 │   └── tabs/
 │       ├── tabs_screen.dart
 │       ├── home_screen.dart
 │       ├── family_screen.dart
+│       ├── family_member_screen.dart
 │       ├── scan_screen.dart
 │       ├── profile_screen.dart
-│       └── family_member_screen.dart
+│       └── donation_screen.dart
 ├── services/                  # Business logic
 │   ├── auth_storage.dart
 │   └── family_storage.dart
