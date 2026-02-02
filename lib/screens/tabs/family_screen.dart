@@ -16,6 +16,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
   final _nameController = TextEditingController();
   final _relationController = TextEditingController();
   final _ageController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   String? _selectedId;
 
   @override
@@ -23,28 +25,43 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     _nameController.dispose();
     _relationController.dispose();
     _ageController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   Color _getAvatarColor(String name) {
-    final index = name.isNotEmpty ? name.codeUnitAt(0) % AppColors.avatarColors.length : 0;
+    final index = name.isNotEmpty
+        ? name.codeUnitAt(0) % AppColors.avatarColors.length
+        : 0;
     return AppColors.avatarColors[index];
   }
 
   Future<void> _addMember() async {
-    if (_nameController.text.trim().isEmpty || _relationController.text.trim().isEmpty) {
+    if (_nameController.text.trim().isEmpty ||
+        _relationController.text.trim().isEmpty) {
       return;
     }
 
     await ref.read(familyMembersProvider.notifier).addMember(
           name: _nameController.text.trim(),
           relation: _relationController.text.trim(),
-          age: _ageController.text.trim().isNotEmpty ? _ageController.text.trim() : null,
+          age: _ageController.text.trim().isNotEmpty
+              ? _ageController.text.trim()
+              : null,
+          email: _emailController.text.trim().isNotEmpty
+              ? _emailController.text.trim()
+              : null,
+          phone: _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
         );
 
     _nameController.clear();
     _relationController.clear();
     _ageController.clear();
+    _emailController.clear();
+    _phoneController.clear();
   }
 
   @override
@@ -117,6 +134,22 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                         onSubmitted: (_) => _addMember(),
                       ),
                       const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          hintText: 'Email Address',
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          hintText: 'Phone Number',
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       ElevatedButton(
                         onPressed: _addMember,
                         child: const Text('Add Member'),
@@ -143,7 +176,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusFull),
                       ),
                       child: Text(
                         '${members.length}',
@@ -170,7 +204,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                         padding: const EdgeInsets.all(AppSpacing.xxxl),
                         child: Column(
                           children: [
-                            const Text('👨‍👩‍👧‍👦', style: TextStyle(fontSize: 64)),
+                            const Text('👨‍👩‍👧‍👦',
+                                style: TextStyle(fontSize: 64)),
                             const SizedBox(height: AppSpacing.md),
                             Text(
                               'No Family Members Yet',
@@ -182,7 +217,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                             const SizedBox(height: AppSpacing.md),
                             Text(
                               'Add your first family member to start building your family health tree',
-                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -200,10 +236,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: Card(
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusLg),
                             side: BorderSide(
-                              color: isSelected 
-                                  ? AppColors.primary 
+                              color: isSelected
+                                  ? AppColors.primary
                                   : theme.dividerTheme.color!,
                               width: isSelected ? 2 : 1,
                             ),
@@ -212,7 +249,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                             onTap: () => setState(() {
                               _selectedId = isSelected ? null : member.id;
                             }),
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusLg),
                             child: Padding(
                               padding: const EdgeInsets.all(AppSpacing.lg),
                               child: Column(
@@ -224,7 +262,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                         height: 56,
                                         decoration: BoxDecoration(
                                           color: avatarColor.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                                          borderRadius: BorderRadius.circular(
+                                              AppSpacing.radiusFull),
                                         ),
                                         alignment: Alignment.center,
                                         child: Text(
@@ -239,35 +278,45 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                       const SizedBox(width: AppSpacing.md),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               member.name,
-                                              style: theme.textTheme.bodyLarge?.copyWith(
+                                              style: theme.textTheme.bodyLarge
+                                                  ?.copyWith(
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 16,
                                               ),
                                             ),
-                                            const SizedBox(height: AppSpacing.xs),
+                                            const SizedBox(
+                                                height: AppSpacing.xs),
                                             Text(
                                               '${member.relation}${member.age != null ? ' • ${member.age} years' : ''}',
-                                              style: theme.textTheme.bodySmall?.copyWith(
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
                                                 fontSize: 13,
                                               ),
                                             ),
-                                            const SizedBox(height: AppSpacing.xs),
+                                            const SizedBox(
+                                                height: AppSpacing.xs),
                                             Row(
                                               children: [
                                                 Text(
                                                   'ID:',
-                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                  style: theme
+                                                      .textTheme.bodySmall
+                                                      ?.copyWith(
                                                     fontSize: 11,
                                                   ),
                                                 ),
-                                                const SizedBox(width: AppSpacing.xs),
+                                                const SizedBox(
+                                                    width: AppSpacing.xs),
                                                 Text(
                                                   member.memberId,
-                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                  style: theme
+                                                      .textTheme.bodySmall
+                                                      ?.copyWith(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -279,7 +328,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                       ),
                                       ElevatedButton(
                                         onPressed: () {
-                                          ref.read(familyMembersProvider.notifier)
+                                          ref
+                                              .read(familyMembersProvider
+                                                  .notifier)
                                               .removeMember(member.id);
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -302,7 +353,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                     const SizedBox(height: AppSpacing.md),
                                     Text(
                                       'Quick Actions',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
                                       ),
@@ -313,29 +365,35 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                         Expanded(
                                           child: ElevatedButton.icon(
                                             onPressed: () {
-                                              context.push('/family-member/${member.id}');
+                                              context.push(
+                                                  '/family-member/${member.id}');
                                             },
-                                            icon: const Text('👤', style: TextStyle(fontSize: 16)),
+                                            icon: const Text('👤',
+                                                style: TextStyle(fontSize: 16)),
                                             label: const Text(
                                               'View Profile',
                                               style: TextStyle(fontSize: 13),
                                             ),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors.primary,
+                                              backgroundColor:
+                                                  AppColors.primary,
                                             ),
                                           ),
                                         ),
                                         const SizedBox(width: AppSpacing.md),
                                         Expanded(
                                           child: ElevatedButton.icon(
-                                            onPressed: () => context.go('/scan'),
-                                            icon: const Text('🔬', style: TextStyle(fontSize: 16)),
+                                            onPressed: () =>
+                                                context.go('/scan'),
+                                            icon: const Text('🔬',
+                                                style: TextStyle(fontSize: 16)),
                                             label: const Text(
                                               'View Reports',
                                               style: TextStyle(fontSize: 13),
                                             ),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors.secondary,
+                                              backgroundColor:
+                                                  AppColors.secondary,
                                             ),
                                           ),
                                         ),
@@ -360,7 +418,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               Center(
                 child: Text(
                   _selectedId != null
-                      ? '✨ Selected: ${membersState.maybeWhen(data: (m) => m.firstWhere((x) => x.id == _selectedId).name, orElse: () => '')}' 
+                      ? '✨ Selected: ${membersState.maybeWhen(data: (m) => m.firstWhere((x) => x.id == _selectedId).name, orElse: () => '')}'
                       : '💡 Tip: Tap a member to view profile & reports',
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
                 ),

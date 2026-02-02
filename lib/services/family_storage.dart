@@ -11,6 +11,8 @@ class FamilyStorage {
     required String name,
     required String relation,
     String? age,
+    String? email,
+    String? phone,
   }) async {
     final members = await readMembers();
     final newMember = FamilyMember(
@@ -19,6 +21,8 @@ class FamilyStorage {
       name: name,
       relation: relation,
       age: age,
+      email: email,
+      phone: phone,
     );
     await writeMembers([newMember, ...members]);
   }

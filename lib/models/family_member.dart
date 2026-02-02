@@ -4,6 +4,8 @@ class FamilyMember {
   final String name;
   final String relation;
   final String? age;
+  final String? email;
+  final String? phone;
   final String? latestCheckupDate;
   final List<String> latestReports;
 
@@ -13,6 +15,8 @@ class FamilyMember {
     required this.name,
     required this.relation,
     this.age,
+    this.email,
+    this.phone,
     this.latestCheckupDate,
     this.latestReports = const [],
   });
@@ -23,6 +27,8 @@ class FamilyMember {
         'name': name,
         'relation': relation,
         if (age != null) 'age': age,
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
         if (latestCheckupDate != null) 'latestCheckupDate': latestCheckupDate,
         'latestReports': latestReports,
       };
@@ -33,6 +39,8 @@ class FamilyMember {
         name: json['name'] as String? ?? '',
         relation: json['relation'] as String? ?? '',
         age: json['age'] as String?,
+        email: json['email'] as String?,
+        phone: json['phone'] as String?,
         latestCheckupDate: json['latestCheckupDate'] as String?,
         latestReports: (json['latestReports'] as List<dynamic>?)
                 ?.map((e) => e.toString())

@@ -2,20 +2,142 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/health_profile.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/health_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  late TextEditingController _heightController;
+  late TextEditingController _weightController;
+  late TextEditingController _allergiesController;
+  late TextEditingController _medicalConditionsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _heightController = TextEditingController();
+    _weightController = TextEditingController();
+    _allergiesController = TextEditingController();
+    _medicalConditionsController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _heightController.dispose();
+    _weightController.dispose();
+    _allergiesController.dispose();
+    _medicalConditionsController.dispose();
+    super.dispose();
+  }
+
+  void _showHealthProfileModal(HealthProfile? currentProfile) {
+    if (currentProfile != null) {
+      _heightController.text = currentProfile.height ?? '';
+      _weightController.text = currentProfile.weight ?? '';
+      _allergiesController.text = currentProfile.allergies ?? '';
+      _medicalConditionsController.text =
+          currentProfile.medicalConditions ?? '';
+    } else {
+      _heightController.clear();
+      _weightController.clear();
+      _allergiesController.clear();
+      _medicalConditionsController.clear();
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('💚 Update Health Profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _heightController,
+                decoration: const InputDecoration(
+                  labelText: 'Height (cm)',
+                  hintText: 'e.g., 175',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: _weightController,
+                decoration: const InputDecoration(
+                  labelText: 'Weight (kg)',
+                  hintText: 'e.g., 70',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: _allergiesController,
+                decoration: const InputDecoration(
+                  labelText: 'Allergies',
+                  hintText: 'e.g., Peanuts, Penicillin',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: _medicalConditionsController,
+                decoration: const InputDecoration(
+                  labelText: 'Medical Conditions',
+                  hintText: 'e.g., Diabetes, Hypertension',
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updated = HealthProfile(
+                height: _heightController.text.isNotEmpty
+                    ? _heightController.text
+                    : null,
+                weight: _weightController.text.isNotEmpty
+                    ? _weightController.text
+                    : null,
+                allergies: _allergiesController.text.isNotEmpty
+                    ? _allergiesController.text
+                    : null,
+                medicalConditions: _medicalConditionsController.text.isNotEmpty
+                    ? _medicalConditionsController.text
+                    : null,
+              );
+              ref.read(healthProfileProvider.notifier).updateProfile(updated);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
     final session = authState.value;
     final themeMode = ref.watch(themeModeProvider);
+    final healthState = ref.watch(healthProfileProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -54,7 +176,8 @@ class ProfileScreen extends ConsumerWidget {
                       height: 96,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusFull),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -145,12 +268,15 @@ class ProfileScreen extends ConsumerWidget {
                             const SizedBox(height: AppSpacing.xs),
                             Text(
                               'Switch between light and dark theme for comfortable viewing',
-                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(fontSize: 13),
                             ),
                             const SizedBox(height: AppSpacing.lg),
                             ElevatedButton(
                               onPressed: () {
-                                ref.read(themeModeProvider.notifier).toggleTheme();
+                                ref
+                                    .read(themeModeProvider.notifier)
+                                    .toggleTheme();
                               },
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -161,7 +287,9 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: AppSpacing.md),
                                   Text(
-                                    themeMode == ThemeMode.dark ? 'Dark Mode' : 'Light Mode',
+                                    themeMode == ThemeMode.dark
+                                        ? 'Dark Mode'
+                                        : 'Light Mode',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15,
@@ -185,38 +313,104 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
 
                     // Health Profile
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '💚 Health Profile',
-                              style: theme.textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'Track height, weight, allergies, medical conditions, and more',
-                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            _FeatureItem(icon: '📏', text: 'Height & Weight Tracking'),
-                            const SizedBox(height: AppSpacing.md),
-                            _FeatureItem(icon: '🩺', text: 'Medical Conditions'),
-                            const SizedBox(height: AppSpacing.md),
-                            _FeatureItem(icon: '💊', text: 'Allergies & Medications'),
-                            const SizedBox(height: AppSpacing.lg),
-                            Center(
-                              child: Text(
-                                'Coming Soon',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
+                    GestureDetector(
+                      onTap: () {
+                        healthState.whenData((profile) {
+                          _showHealthProfileModal(profile);
+                        });
+                      },
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '💚 Health Profile',
+                                    style: theme.textTheme.titleMedium,
+                                  ),
+                                  Icon(
+                                    Icons.edit,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'Track height, weight, allergies, medical conditions, and more',
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(fontSize: 13),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              healthState.when(
+                                data: (profile) {
+                                  if (profile.height == null &&
+                                      profile.weight == null &&
+                                      profile.allergies == null &&
+                                      profile.medicalConditions == null) {
+                                    return Center(
+                                      child: Text(
+                                        'Click to add your health information',
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (profile.height != null) ...[
+                                        _HealthInfoItem(
+                                            icon: '📏',
+                                            label: 'Height',
+                                            value: '${profile.height} cm'),
+                                        const SizedBox(height: AppSpacing.md),
+                                      ],
+                                      if (profile.weight != null) ...[
+                                        _HealthInfoItem(
+                                            icon: '⚖️',
+                                            label: 'Weight',
+                                            value: '${profile.weight} kg'),
+                                        const SizedBox(height: AppSpacing.md),
+                                      ],
+                                      if (profile.allergies != null) ...[
+                                        _HealthInfoItem(
+                                            icon: '⚠️',
+                                            label: 'Allergies',
+                                            value: profile.allergies!),
+                                        const SizedBox(height: AppSpacing.md),
+                                      ],
+                                      if (profile.medicalConditions != null)
+                                        _HealthInfoItem(
+                                            icon: '🩺',
+                                            label: 'Medical Conditions',
+                                            value: profile.medicalConditions!),
+                                    ],
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                                error: (error, stack) => Center(
+                                  child: Text('Error: $error'),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -277,13 +471,15 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _FeatureItem extends StatelessWidget {
+class _HealthInfoItem extends StatelessWidget {
   final String icon;
-  final String text;
+  final String label;
+  final String value;
 
-  const _FeatureItem({
+  const _HealthInfoItem({
     required this.icon,
-    required this.text,
+    required this.label,
+    required this.value,
   });
 
   @override
@@ -294,9 +490,27 @@ class _FeatureItem extends StatelessWidget {
       children: [
         Text(icon, style: const TextStyle(fontSize: 20)),
         const SizedBox(width: AppSpacing.md),
-        Text(
-          text,
-          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -330,9 +544,10 @@ class _InfoRow extends StatelessWidget {
           Flexible(
             child: Text(
               value,
-              style: valueStyle ?? theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: valueStyle ??
+                  theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
               textAlign: TextAlign.right,
             ),
           ),

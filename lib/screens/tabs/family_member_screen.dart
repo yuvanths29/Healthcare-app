@@ -64,6 +64,20 @@ class FamilyMemberScreen extends ConsumerWidget {
                           member.relation,
                           style: theme.textTheme.bodyMedium,
                         ),
+                        if (member.email != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            member.email!,
+                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                          ),
+                        ],
+                        if (member.phone != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            member.phone!,
+                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                          ),
+                        ],
                         if (member.age != null) ...[
                           const SizedBox(height: AppSpacing.xs),
                           Text(

@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/family_member.dart';
 import '../services/family_storage.dart';
 
-final familyMembersProvider = StateNotifierProvider<FamilyMembersNotifier, AsyncValue<List<FamilyMember>>>((ref) {
+final familyMembersProvider = StateNotifierProvider<FamilyMembersNotifier,
+    AsyncValue<List<FamilyMember>>>((ref) {
   return FamilyMembersNotifier();
 });
 
-class FamilyMembersNotifier extends StateNotifier<AsyncValue<List<FamilyMember>>> {
+class FamilyMembersNotifier
+    extends StateNotifier<AsyncValue<List<FamilyMember>>> {
   FamilyMembersNotifier() : super(const AsyncValue.loading()) {
     _loadMembers();
   }
@@ -24,8 +26,16 @@ class FamilyMembersNotifier extends StateNotifier<AsyncValue<List<FamilyMember>>
     required String name,
     required String relation,
     String? age,
+    String? email,
+    String? phone,
   }) async {
-    await FamilyStorage.addMember(name: name, relation: relation, age: age);
+    await FamilyStorage.addMember(
+      name: name,
+      relation: relation,
+      age: age,
+      email: email,
+      phone: phone,
+    );
     await _loadMembers();
   }
 
