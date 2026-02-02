@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
+import 'local_auth_service.dart';
 
 class AuthStorage {
-  static const String _usersKey = 'localdb.users.v1';
   static const String _sessionKey = 'localdb.session.v1';
+  static bool _dbInitialized = false;
 
   static Future<Session?> getSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -21,10 +22,22 @@ class AuthStorage {
     }
   }
 
+  static Future<void> initializeDatabase() async {
+    if (_dbInitialized) return;
+    try {
+      await LocalAuthService().initialize();
+      _dbInitialized = true;
+    } catch (e) {
+      print('Error initializing local auth database: $e');
+    }
+  }
+
   static Future<({bool ok, Session? session, String? message})> loginUser({
     required String email,
     required String password,
   }) async {
+    await initializeDatabase();
+
     final identifier = email.trim();
     final lowerEmail = identifier.toLowerCase();
 
@@ -36,30 +49,40 @@ class AuthStorage {
       );
     }
 
-    final users = await _readUsers();
-    User? user = users[lowerEmail];
+    try {
+      final authService = LocalAuthService();
 
-    // Check if identifier is a userId
-    if (user == null) {
-      user = users.values.firstWhere(
-        (u) => u.userId == identifier,
-        orElse: () => User(userId: '', name: '', email: '', password: ''),
+      // Try to authenticate with email and password
+      User? user = await authService.authenticateUser(lowerEmail, password);
+
+      // If not found by email, try by userId
+      if (user == null) {
+        user = await authService.getUserById(identifier);
+        if (user != null && user.password != password) {
+          user = null;
+        }
+      }
+
+      if (user == null) {
+        return (ok: false, session: null, message: 'Invalid email or password');
+      }
+
+      final session = Session(
+        userId: user.userId,
+        email: user.email,
+        name: user.name,
       );
-      if (user.userId.isEmpty) user = null;
+      await _saveSession(session);
+
+      return (ok: true, session: session, message: null);
+    } catch (e) {
+      print('Login error: $e');
+      return (
+        ok: false,
+        session: null,
+        message: 'An error occurred during login'
+      );
     }
-
-    if (user == null || user.password != password) {
-      return (ok: false, session: null, message: 'Invalid credentials');
-    }
-
-    final session = Session(
-      userId: user.userId,
-      email: user.email,
-      name: user.name,
-    );
-    await _saveSession(session);
-
-    return (ok: true, session: session, message: null);
   }
 
   static Future<void> logout() async {
@@ -71,28 +94,30 @@ class AuthStorage {
     required String email,
     required String newPassword,
   }) async {
+    await initializeDatabase();
+
     final trimmedEmail = email.trim().toLowerCase();
 
     if (trimmedEmail.isEmpty || newPassword.isEmpty) {
       return (ok: false, message: 'Please provide email and new password.');
     }
 
-    final users = await _readUsers();
-    final user = users[trimmedEmail];
-    if (user == null) {
-      return (ok: false, message: 'No user found for that email.');
+    try {
+      final authService = LocalAuthService();
+      final success = await authService.updatePassword(
+        email: trimmedEmail,
+        newPassword: newPassword,
+      );
+
+      if (!success) {
+        return (ok: false, message: 'No user found for that email.');
+      }
+
+      return (ok: true, message: null);
+    } catch (e) {
+      print('Reset password error: $e');
+      return (ok: false, message: 'An error occurred during password reset.');
     }
-
-    users[trimmedEmail] = User(
-      userId: user.userId,
-      name: user.name,
-      email: user.email,
-      password: newPassword,
-    );
-
-    await _writeUsers(users);
-
-    return (ok: true, message: null);
   }
 
   static Future<({bool ok, Session? session, String? message})> signUpUser({
@@ -100,6 +125,8 @@ class AuthStorage {
     required String email,
     required String password,
   }) async {
+    await initializeDatabase();
+
     final trimmedEmail = email.trim().toLowerCase();
     final trimmedName = name.trim();
 
@@ -107,75 +134,53 @@ class AuthStorage {
       return (ok: false, session: null, message: 'Please fill all fields.');
     }
 
-    final users = await _readUsers();
-    if (users.containsKey(trimmedEmail)) {
+    try {
+      final authService = LocalAuthService();
+
+      // Check if user already exists
+      final userExists = await authService.userExists(trimmedEmail);
+      if (userExists) {
+        return (
+          ok: false,
+          session: null,
+          message: 'User already exists. Please login.'
+        );
+      }
+
+      // Create new user in database
+      final user = await authService.createUser(
+        name: trimmedName,
+        email: trimmedEmail,
+        password: password,
+      );
+
+      final session = Session(
+        userId: user.userId,
+        email: user.email,
+        name: user.name,
+      );
+      await _saveSession(session);
+
+      return (ok: true, session: session, message: null);
+    } catch (e) {
+      print('Signup error: $e');
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        return (
+          ok: false,
+          session: null,
+          message: 'User already exists. Please login.'
+        );
+      }
       return (
         ok: false,
         session: null,
-        message: 'User already exists. Please login.'
+        message: 'An error occurred during signup.'
       );
-    }
-
-    final userId = _createUserId();
-    users[trimmedEmail] = User(
-      userId: userId,
-      name: trimmedName,
-      email: trimmedEmail,
-      password: password,
-    );
-
-    await _writeUsers(users);
-
-    final session = Session(
-      userId: userId,
-      email: trimmedEmail,
-      name: trimmedName,
-    );
-    await _saveSession(session);
-
-    return (ok: true, session: session, message: null);
-  }
-
-  static String _createUserId() {
-    final rand =
-        DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
-    final random =
-        (DateTime.now().microsecond % 10000).toRadixString(36).toUpperCase();
-    return 'U-$rand-$random';
-  }
-
-  static Future<Map<String, User>> _readUsers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_usersKey);
-    if (raw == null) return {};
-
-    try {
-      final Map<String, dynamic> parsed = jsonDecode(raw);
-      final Map<String, User> users = {};
-
-      parsed.forEach((email, userData) {
-        if (userData is Map<String, dynamic>) {
-          users[email] = User.fromJson(userData);
-        }
-      });
-
-      return users;
-    } catch (e) {
-      return {};
     }
   }
 
   static Future<void> _saveSession(Session session) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
-  }
-
-  static Future<void> _writeUsers(Map<String, User> users) async {
-    final prefs = await SharedPreferences.getInstance();
-    final Map<String, dynamic> data = {};
-    users.forEach((email, user) {
-      data[email] = user.toJson();
-    });
-    await prefs.setString(_usersKey, jsonEncode(data));
   }
 }
