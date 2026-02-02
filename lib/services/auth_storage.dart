@@ -95,7 +95,7 @@ class AuthStorage {
     return (ok: true, message: null);
   }
 
-  static Future<({bool ok, String? userId, String? message})> signUpUser({
+  static Future<({bool ok, Session? session, String? message})> signUpUser({
     required String name,
     required String email,
     required String password,
@@ -104,14 +104,14 @@ class AuthStorage {
     final trimmedName = name.trim();
 
     if (trimmedName.isEmpty || trimmedEmail.isEmpty || password.isEmpty) {
-      return (ok: false, userId: null, message: 'Please fill all fields.');
+      return (ok: false, session: null, message: 'Please fill all fields.');
     }
 
     final users = await _readUsers();
     if (users.containsKey(trimmedEmail)) {
       return (
         ok: false,
-        userId: null,
+        session: null,
         message: 'User already exists. Please login.'
       );
     }
@@ -133,7 +133,7 @@ class AuthStorage {
     );
     await _saveSession(session);
 
-    return (ok: true, userId: userId, message: null);
+    return (ok: true, session: session, message: null);
   }
 
   static String _createUserId() {

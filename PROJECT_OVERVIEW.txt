@@ -1,0 +1,54 @@
+Healthcare-app (Flutter)
+
+ROUTING OVERVIEW (GoRouter)
+- /                   SplashScreen
+- /login              LoginScreen
+- /signup             SignupScreen
+- /reset-password     ResetPasswordScreen
+- /permissions        PermissionsScreen (shown once per install/user via SharedPreferences)
+
+Main tab routes (ShellRoute via TabsScreen)
+- /home               HomeScreen (Dashboard)
+- /family             FamilyScreen
+- /scan               ScanScreen
+- /donation           DonationScreen
+- /profile            ProfileScreen
+
+Other routes
+- /family-member/:id  FamilyMemberScreen
+
+AUTH / SESSION
+- Local auth using SharedPreferences
+  - Users stored in key: localdb.users.v1
+  - Session stored in key: localdb.session.v1
+- Signup creates a user + saves a Session
+- Login supports either email or userId + password
+
+PERMISSIONS ONBOARDING
+- Screen: PermissionsScreen
+- Flag: onboarding.permissions.completed.v1
+- Permissions requested:
+  - Camera
+  - Contacts
+  - Files/Photos (Android: storage, iOS: photos)
+- Android manifest updated with:
+  - android.permission.CAMERA
+  - android.permission.READ_CONTACTS / WRITE_CONTACTS
+  - android.permission.READ_MEDIA_IMAGES (Android 13+)
+  - android.permission.READ_EXTERNAL_STORAGE (maxSdkVersion=32)
+
+UI CLEANUPS IMPLEMENTED
+- Replaced emoji icons on Login/Signup with Material icons.
+
+KNOWN LIMITATIONS / NOTES
+- This repo appears to be Android-focused (no iOS folder/Info.plist). If you later add iOS, you must add iOS permission usage descriptions.
+
+NEXT UI IMPROVEMENT IDEAS (MediBuddy-style)
+- Consistent top header section on auth screens (logo + short subtitle)
+- Replace placeholder Google icons with proper brand assets (SVG/PNG) and consistent social button style
+- Create shared widgets:
+  - PrimaryButton / SecondaryButton
+  - AppTextField (with icon, label, helper/error)
+  - SectionCard (for dashboard tiles)
+- Standardize spacing and typography across all screens (use theme + spacing constants only)
+- Replace any remaining decorative emojis/logos with a unified icon set and brand palette

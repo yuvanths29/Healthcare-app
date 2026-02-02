@@ -45,12 +45,18 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
       email: email,
       password: password,
     );
-    if (result.ok) {
-      final session = await AuthStorage.getSession();
-      state = AsyncValue.data(session);
-      return (ok: true, message: null);
+    if (!result.ok) {
+      return (ok: false, message: result.message);
     }
-    return (ok: false, message: result.message);
+
+    final session = result.session;
+    if (session == null) {
+      state = const AsyncValue.data(null);
+      return (ok: false, message: 'Signup failed. Please try again.');
+    }
+
+    state = AsyncValue.data(session);
+    return (ok: true, message: null);
   }
 
   Future<void> _loadSession() async {

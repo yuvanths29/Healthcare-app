@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_spacing.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class ScanScreen extends StatelessWidget {
   const ScanScreen({super.key});
@@ -77,13 +79,59 @@ class ScanScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         ElevatedButton(
-                          onPressed: () {},
-                          child: const Text('📷 Start Scan'),
+                          onPressed: () async {
+                            final ok = await _ensurePermission(
+                              context,
+                              Permission.camera,
+                              title: 'Allow Camera',
+                              description:
+                                  'To scan reports, please allow camera access.',
+                            );
+                            if (!ok || !context.mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Camera permission granted. Implement camera scan next.',
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Start Scan'),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         OutlinedButton(
-                          onPressed: () {},
-                          child: const Text('📁 Upload File'),
+                          onPressed: () async {
+                            // Files permission can be photos (Android 13+/iOS) or storage (older Android)
+                            final okPhotos = await _ensurePermission(
+                              context,
+                              Permission.photos,
+                              title: 'Allow Photos / Files',
+                              description:
+                                  'To upload reports, please allow access to photos/files.',
+                            );
+                            if (!okPhotos) {
+                              // Fallback for older Android
+                              final okStorage = await _ensurePermission(
+                                context,
+                                Permission.storage,
+                                title: 'Allow Files',
+                                description:
+                                    'To upload reports, please allow file access.',
+                              );
+                              if (!okStorage || !context.mounted) return;
+                            }
+
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'File permission granted. Implement file picker next.',
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Upload File'),
                         ),
                       ],
                     ),
@@ -242,6 +290,68 @@ class ScanScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<bool> _ensurePermission(
+    BuildContext context,
+    Permission permission, {
+    required String title,
+    required String description,
+  }) async {
+    final status = await permission.status;
+    if (status.isGranted) return true;
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(description),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Not now'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true) return false;
+
+    final requested = await permission.request();
+    if (requested.isGranted) return true;
+
+    if (requested.isPermanentlyDenied) {
+      if (!context.mounted) return false;
+      final open = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Permission required'),
+          content: const Text(
+            'This permission is disabled. Please enable it from Settings.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+
+      if (open == true) {
+        await openAppSettings();
+      }
+    }
+
+    return false;
   }
 }
 

@@ -97,7 +97,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Text('🔍', style: TextStyle(fontSize: 18)),
+                        icon: const Icon(Icons.g_mobiledata),
                         label: const Text('Google Sign In'),
                       ),
                     ),
@@ -105,7 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Text('✉️', style: TextStyle(fontSize: 18)),
+                        icon: const Icon(Icons.mail_outline),
                         label: const Text('Email Sign Up'),
                       ),
                     ),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../providers/auth_provider.dart';
-import '../../theme/app_spacing.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -18,66 +19,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _passwordController = TextEditingController();
   String? _error;
   bool _loading = false;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  ({int score, String label}) _getPasswordStrength(String password) {
-    final lengthOk = password.length >= 8;
-    final hasLower = password.contains(RegExp(r'[a-z]'));
-    final hasUpper = password.contains(RegExp(r'[A-Z]'));
-    final hasNumber = password.contains(RegExp(r'\d'));
-    final hasSpecial = password.contains(RegExp(r'[^A-Za-z0-9]'));
-
-    final score = [lengthOk, hasLower, hasUpper, hasNumber, hasSpecial]
-        .where((x) => x)
-        .length;
-
-    String label = 'Weak';
-    if (score >= 4) {
-      label = 'Strong';
-    } else if (score >= 3) {
-      label = 'Medium';
-    }
-
-    return (score: score, label: label);
-  }
-
-  Future<void> _onSignup() async {
-    setState(() {
-      _error = null;
-      _loading = true;
-    });
-
-    try {
-      final result = await ref.read(authProvider.notifier).signUp(
-            name: _nameController.text,
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
-
-      if (!mounted) return;
-
-      if (!result.ok) {
-        setState(() {
-          _error = result.message;
-          _loading = false;
-        });
-        return;
-      }
-
-      context.go('/home');
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +132,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Text('🔍', style: TextStyle(fontSize: 18)),
+                        icon: const Icon(Icons.g_mobiledata),
                         label: const Text('Google Sign Up'),
                       ),
                     ),
@@ -199,7 +140,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Text('✉️', style: TextStyle(fontSize: 18)),
+                        icon: const Icon(Icons.mail_outline),
                         label: const Text('Email Sign Up'),
                       ),
                     ),
@@ -225,5 +166,93 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  ({int score, String label}) _getPasswordStrength(String password) {
+    final lengthOk = password.length >= 8;
+    final hasLower = password.contains(RegExp(r'[a-z]'));
+    final hasUpper = password.contains(RegExp(r'[A-Z]'));
+    final hasNumber = password.contains(RegExp(r'\d'));
+    final hasSpecial = password.contains(RegExp(r'[^A-Za-z0-9]'));
+
+    final score = [lengthOk, hasLower, hasUpper, hasNumber, hasSpecial]
+        .where((x) => x)
+        .length;
+
+    String label = 'Weak';
+    if (score >= 4) {
+      label = 'Strong';
+    } else if (score >= 3) {
+      label = 'Medium';
+    }
+
+    return (score: score, label: label);
+  }
+
+  Future<void> _onSignup() async {
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+
+    try {
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      if (name.isEmpty || email.isEmpty || password.isEmpty) {
+        setState(() {
+          _error = 'Please fill all fields.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (!email.contains('@')) {
+        setState(() {
+          _error = 'Please enter a valid email.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (password.length < 6) {
+        setState(() {
+          _error = 'Password should be at least 6 characters.';
+          _loading = false;
+        });
+        return;
+      }
+
+      final result = await ref.read(authProvider.notifier).signUp(
+            name: name,
+            email: email,
+            password: password,
+          );
+
+      if (!mounted) return;
+
+      if (!result.ok) {
+        setState(() {
+          _error = result.message;
+          _loading = false;
+        });
+        return;
+      }
+
+      context.go('/permissions');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 }

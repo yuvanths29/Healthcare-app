@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/permissions/permissions_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/tabs/donation_screen.dart';
 import 'screens/tabs/family_member_screen.dart';
@@ -19,13 +21,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/login',
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final isLoading = authState.isLoading;
       final isLoggedIn = authState.value != null;
       final isLoginRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/reset-password';
       final isSplashRoute = state.matchedLocation == '/';
+      final isPermissionsRoute = state.matchedLocation == '/permissions';
 
       // If still loading but on splash, allow it briefly then timeout
       if (isLoading && isSplashRoute) {
@@ -43,8 +46,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
+      // If logged in, enforce permissions onboarding (only once).
+      if (isLoggedIn) {
+        final prefs = await SharedPreferences.getInstance();
+        final completed =
+            prefs.getBool('onboarding.permissions.completed.v1') ?? false;
+
+        if (!completed && !isPermissionsRoute) {
+          return '/permissions';
+        }
+
+        if (completed && isPermissionsRoute) {
+          return '/home';
+        }
+      }
+
       // Redirect to home if logged in and on login page
       if (isLoggedIn && isLoginRoute) {
+        // After a successful signup, auth state flips to logged-in while still
+        // on /signup. Don't auto-redirect to /home in that moment; let the
+        // signup screen take the user to the permissions onboarding.
+        if (state.matchedLocation == '/signup') {
+          return null;
+        }
         return '/home';
       }
 
@@ -66,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: '/permissions',
+        builder: (context, state) => const PermissionsScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => TabsScreen(child: child),
