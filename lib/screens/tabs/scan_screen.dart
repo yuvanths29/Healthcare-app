@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../providers/auth_provider.dart';
+import '../../providers/report_provider.dart';
+import '../../models/report_item.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 
-class ScanScreen extends StatelessWidget {
+class ScanScreen extends ConsumerWidget {
   const ScanScreen({super.key});
 
+  static const List<String> _categories = [
+    'Cardiology report',
+    'Diabetics report',
+    'Pregnancy report',
+    'Blood pressure report',
+    'ECG reports',
+  ];
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final session = ref.watch(authProvider).value;
 
     final features = [
       ('🩺', 'CBC Reports', 'Complete blood count analysis'),
@@ -102,34 +118,100 @@ class ScanScreen extends StatelessWidget {
                         const SizedBox(height: AppSpacing.md),
                         OutlinedButton(
                           onPressed: () async {
-                            // Files permission can be photos (Android 13+/iOS) or storage (older Android)
-                            final okPhotos = await _ensurePermission(
-                              context,
-                              Permission.photos,
-                              title: 'Allow Photos / Files',
-                              description:
-                                  'To upload reports, please allow access to photos/files.',
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Opening file picker...'),
+                                duration: Duration(milliseconds: 900),
+                              ),
                             );
-                            if (!okPhotos) {
-                              // Fallback for older Android
-                              final okStorage = await _ensurePermission(
-                                context,
-                                Permission.storage,
-                                title: 'Allow Files',
-                                description:
-                                    'To upload reports, please allow file access.',
+
+                            if (kIsWeb) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'File storage is not supported on Web in this build. Please run on Android/Desktop.',
+                                  ),
+                                ),
                               );
-                              if (!okStorage || !context.mounted) return;
+                              return;
+                            }
+
+                            if (session == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please login to upload reports.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            FilePickerResult? picked;
+                            try {
+                              picked = await FilePicker.platform.pickFiles(
+                                allowMultiple: false,
+                                withData: false,
+                                dialogTitle: 'Select report to upload',
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Unable to open file picker: $e'),
+                                ),
+                              );
+                              return;
                             }
 
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'File permission granted. Implement file picker next.',
+                            final files = picked?.files;
+                            if (files == null || files.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No file selected.'),
                                 ),
-                              ),
-                            );
+                              );
+                              return;
+                            }
+                            final file = files.first;
+                            final path = file.path;
+                            if (path == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Selected file path is unavailable on this platform.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final category = await _pickCategory(context);
+                            if (!context.mounted) return;
+                            if (category == null) return;
+
+                            try {
+                              await ref
+                                  .read(reportsProvider(session.userId).notifier)
+                                  .addReport(
+                                    category: category,
+                                    sourcePath: path,
+                                    originalName: file.name,
+                                  );
+
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Saved to $category'),
+                                ),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Upload failed: $e'),
+                                ),
+                              );
+                            }
                           },
                           child: const Text('Upload File'),
                         ),
@@ -259,29 +341,36 @@ class ScanScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.xxxl),
-                        child: Column(
-                          children: [
-                            const Text('📭', style: TextStyle(fontSize: 48)),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'No Scans Yet',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
+                    if (session == null)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xxxl),
+                          child: Column(
+                            children: [
+                              const Text('🔒', style: TextStyle(fontSize: 48)),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'Login required',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'Start scanning your medical reports to build your health history',
-                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'Login to view and manage your uploaded reports.',
+                                style:
+                                    theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
+                      )
+                    else
+                      _ReportsSection(
+                        userId: session.userId,
+                        categories: _categories,
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -289,6 +378,44 @@ class ScanScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  static Future<String?> _pickCategory(BuildContext context) async {
+    String? selected = _categories.first;
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select category'),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return DropdownButtonFormField<String>(
+                value: selected,
+                items: _categories
+                    .map(
+                      (c) => DropdownMenuItem<String>(
+                        value: c,
+                        child: Text(c),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => selected = v),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(selected),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -352,6 +479,146 @@ class ScanScreen extends StatelessWidget {
     }
 
     return false;
+  }
+}
+
+class _ReportsSection extends ConsumerWidget {
+  final String userId;
+  final List<String> categories;
+
+  const _ReportsSection({
+    required this.userId,
+    required this.categories,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final reportsState = ref.watch(reportsProvider(userId));
+
+    return reportsState.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text(
+            'Unable to load reports: $e',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ),
+      ),
+      data: (reports) {
+        if (reports.isEmpty) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xxxl),
+              child: Column(
+                children: [
+                  const Text('📭', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'No Reports Yet',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Upload your medical reports and categorize them for quick access.',
+                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final Map<String, List<ReportItem>> byCategory = {
+          for (final c in categories) c: <ReportItem>[]
+        };
+        for (final r in reports) {
+          byCategory.putIfAbsent(r.category, () => <ReportItem>[]).add(r);
+        }
+
+        return Column(
+          children: categories.map((cat) {
+            final items = byCategory[cat] ?? const <ReportItem>[];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Card(
+                child: ExpansionTile(
+                  title: Text(
+                    cat,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${items.length} file(s)',
+                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+                  ),
+                  children: items.isEmpty
+                      ? [
+                          Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'No reports in this category yet.',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
+                        ]
+                      : items
+                          .map(
+                            (r) => ListTile(
+                              title: Text(
+                                r.originalName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                DateTime.fromMillisecondsSinceEpoch(r.createdAtMs)
+                                    .toLocal()
+                                    .toString(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                ),
+                              ),
+                              onTap: () async {
+                                try {
+                                  await OpenFilex.open(r.storedPath);
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Unable to open file: $e')),
+                                  );
+                                }
+                              },
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () async {
+                                  await ref
+                                      .read(reportsProvider(userId).notifier)
+                                      .deleteReport(r.id);
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
   }
 }
 

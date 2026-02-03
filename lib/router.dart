@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/auth_provider.dart';
-import 'services/auth_storage.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -17,12 +17,29 @@ import 'screens/tabs/profile_screen.dart';
 import 'screens/tabs/scan_screen.dart';
 import 'screens/tabs/tabs_screen.dart';
 
+class _RouterRefreshNotifier extends ChangeNotifier {
+  AsyncValue<dynamic> _authState;
+
+  _RouterRefreshNotifier(this._authState);
+
+  AsyncValue<dynamic> get authState => _authState;
+
+  void update(AsyncValue<dynamic> next) {
+    _authState = next;
+    notifyListeners();
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final refresh = _RouterRefreshNotifier(ref.read(authProvider));
+  ref.listen(authProvider, (_, next) => refresh.update(next));
+  ref.onDispose(refresh.dispose);
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: refresh,
     redirect: (context, state) async {
+      final authState = refresh.authState;
       final isLoading = authState.isLoading;
       final isLoggedIn = authState.value != null;
       final isLoginRoute = state.matchedLocation == '/login' ||
@@ -30,7 +47,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/reset-password';
       final isSplashRoute = state.matchedLocation == '/';
       final isPermissionsRoute = state.matchedLocation == '/permissions';
-      final hasUsers = await AuthStorage.hasAnyUser();
 
       // If still loading but on splash, allow it briefly then timeout
       if (isLoading && isSplashRoute) {
@@ -41,11 +57,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If loading (shouldn't happen due to timeout) but not on splash, go to login
       if (isLoading) {
         return '/login';
-      }
-
-      // Fresh install / no registered users: force signup.
-      if (!hasUsers && state.matchedLocation != '/signup') {
-        return '/signup';
       }
 
       // Redirect to login if not logged in and not already on login
@@ -59,24 +70,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         final completed =
             prefs.getBool('onboarding.permissions.completed.v1') ?? false;
 
-        if (!completed && !isPermissionsRoute) {
+        if (!completed && !isPermissionsRoute && !isLoginRoute) {
           return '/permissions';
         }
 
         if (completed && isPermissionsRoute) {
           return '/home';
         }
-      }
-
-      // Redirect to home if logged in and on login page
-      if (isLoggedIn && isLoginRoute) {
-        // After a successful signup, auth state flips to logged-in while still
-        // on /signup. Don't auto-redirect to /home in that moment; let the
-        // signup screen take the user to the permissions onboarding.
-        if (state.matchedLocation == '/signup') {
-          return null;
-        }
-        return '/home';
       }
 
       return null;
