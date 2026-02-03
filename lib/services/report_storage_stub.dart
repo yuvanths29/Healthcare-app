@@ -11,13 +11,15 @@ class ReportStorageImpl {
     required String sourcePath,
     required String originalName,
   }) {
-    throw UnsupportedError('Local report storage is not available on this platform.');
+    throw UnsupportedError(
+        'Local report storage is not available on this platform.');
   }
 
   static Future<void> deleteReport({
     required String userId,
     required String reportId,
   }) {
-    throw UnsupportedError('Local report storage is not available on this platform.');
+    throw UnsupportedError(
+        'Local report storage is not available on this platform.');
   }
 }

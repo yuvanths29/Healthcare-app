@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/family_provider.dart';
+import '../../providers/health_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/appointments_list.dart';
@@ -152,6 +153,11 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.xxl),
 
+                    // Profile completion
+                    const SizedBox(height: AppSpacing.md),
+                    _ProfileCompletion(ref: ref),
+                    const SizedBox(height: AppSpacing.xl),
+
                     // Quick Actions
                     Text(
                       'Quick Actions',
@@ -252,6 +258,81 @@ class _HealthMetricsCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileCompletion extends StatelessWidget {
+  final WidgetRef ref;
+
+  const _ProfileCompletion({required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final profileState = ref.watch(healthProfileProvider);
+
+    return profileState.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (profile) {
+        final fields = [
+          profile.height,
+          profile.weight,
+          profile.allergies,
+          profile.medicalConditions,
+        ];
+        final filled =
+            fields.where((f) => f != null && f.trim().isNotEmpty).length;
+        final percent = (filled / fields.length * 100).round();
+
+        if (percent >= 100) return const SizedBox.shrink();
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$percent% of your profile is completed',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Please complete the profile for enhanced app experience',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          LinearProgressIndicator(
+                            value: filled / fields.length,
+                            backgroundColor:
+                                theme.dividerColor.withOpacity(0.2),
+                            minHeight: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    ElevatedButton(
+                      onPressed: () => context.go('/profile'),
+                      child: const Text('Complete'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

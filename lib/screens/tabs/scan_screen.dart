@@ -50,7 +50,8 @@ class ScanScreen extends ConsumerWidget {
                   children: [
                     Text(
                       '🔬 Report Scanner',
-                      style: theme.textTheme.displayLarge?.copyWith(fontSize: 32),
+                      style:
+                          theme.textTheme.displayLarge?.copyWith(fontSize: 32),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -74,10 +75,12 @@ class ScanScreen extends ConsumerWidget {
                           height: 80,
                           decoration: BoxDecoration(
                             color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusFull),
                           ),
                           alignment: Alignment.center,
-                          child: const Text('📸', style: TextStyle(fontSize: 40)),
+                          child:
+                              const Text('📸', style: TextStyle(fontSize: 40)),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         Text(
@@ -90,7 +93,8 @@ class ScanScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.md),
                         Text(
                           'Capture images of your lab reports for instant analysis and data extraction',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.lg),
@@ -139,7 +143,8 @@ class ScanScreen extends ConsumerWidget {
                             if (session == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Please login to upload reports.'),
+                                  content:
+                                      Text('Please login to upload reports.'),
                                 ),
                               );
                               return;
@@ -156,7 +161,8 @@ class ScanScreen extends ConsumerWidget {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Unable to open file picker: $e'),
+                                  content:
+                                      Text('Unable to open file picker: $e'),
                                 ),
                               );
                               return;
@@ -191,7 +197,8 @@ class ScanScreen extends ConsumerWidget {
 
                             try {
                               await ref
-                                  .read(reportsProvider(session.userId).notifier)
+                                  .read(
+                                      reportsProvider(session.userId).notifier)
                                   .addReport(
                                     category: category,
                                     sourcePath: path,
@@ -243,13 +250,17 @@ class ScanScreen extends ConsumerWidget {
                       runSpacing: AppSpacing.md,
                       children: features.map((feature) {
                         return SizedBox(
-                          width: (MediaQuery.of(context).size.width - AppSpacing.xl * 2 - AppSpacing.md) / 2,
+                          width: (MediaQuery.of(context).size.width -
+                                  AppSpacing.xl * 2 -
+                                  AppSpacing.md) /
+                              2,
                           child: Card(
                             child: Padding(
                               padding: const EdgeInsets.all(AppSpacing.md),
                               child: Column(
                                 children: [
-                                  Text(feature.$1, style: const TextStyle(fontSize: 32)),
+                                  Text(feature.$1,
+                                      style: const TextStyle(fontSize: 32)),
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     feature.$2,
@@ -262,7 +273,8 @@ class ScanScreen extends ConsumerWidget {
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     feature.$3,
-                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(fontSize: 11),
                                     textAlign: TextAlign.center,
                                   ),
                                 ],
@@ -294,21 +306,24 @@ class ScanScreen extends ConsumerWidget {
                           number: '1',
                           color: AppColors.primary,
                           title: 'Capture or Upload',
-                          description: 'Take a photo or upload a PDF of your lab report',
+                          description:
+                              'Take a photo or upload a PDF of your lab report',
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         _StepItem(
                           number: '2',
                           color: AppColors.secondary,
                           title: 'AI Analysis',
-                          description: 'Our AI extracts key metrics and values from your report',
+                          description:
+                              'Our AI extracts key metrics and values from your report',
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         _StepItem(
                           number: '3',
                           color: AppColors.success,
                           title: 'Track & Monitor',
-                          description: 'View trends, share with family, and get health insights',
+                          description:
+                              'View trends, share with family, and get health insights',
                         ),
                       ],
                     ),
@@ -326,7 +341,7 @@ class ScanScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Recent Scans', style: theme.textTheme.titleMedium),
+                        Text('All Scans', style: theme.textTheme.titleMedium),
                         TextButton(
                           onPressed: () {},
                           child: Text(
@@ -358,8 +373,8 @@ class ScanScreen extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.md),
                               Text(
                                 'Login to view and manage your uploaded reports.',
-                                style:
-                                    theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(fontSize: 13),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -482,7 +497,7 @@ class ScanScreen extends ConsumerWidget {
   }
 }
 
-class _ReportsSection extends ConsumerWidget {
+class _ReportsSection extends ConsumerStatefulWidget {
   final String userId;
   final List<String> categories;
 
@@ -492,9 +507,24 @@ class _ReportsSection extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReportsSection> createState() => _ReportsSectionState();
+}
+
+class _ReportsSectionState extends ConsumerState<_ReportsSection> {
+  String _search = '';
+  String? _selectedCategory;
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final reportsState = ref.watch(reportsProvider(userId));
+    final reportsState = ref.watch(reportsProvider(widget.userId));
 
     return reportsState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -510,79 +540,146 @@ class _ReportsSection extends ConsumerWidget {
         ),
       ),
       data: (reports) {
-        if (reports.isEmpty) {
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xxxl),
-              child: Column(
-                children: [
-                  const Text('📭', style: TextStyle(fontSize: 48)),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'No Reports Yet',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Upload your medical reports and categorize them for quick access.',
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
         final Map<String, List<ReportItem>> byCategory = {
-          for (final c in categories) c: <ReportItem>[]
+          for (final c in widget.categories) c: <ReportItem>[]
         };
         for (final r in reports) {
           byCategory.putIfAbsent(r.category, () => <ReportItem>[]).add(r);
         }
 
+        final filteredCategories = widget.categories
+            .where((c) => c.toLowerCase().contains(_search.toLowerCase()))
+            .toList();
+
         return Column(
-          children: categories.map((cat) {
-            final items = byCategory[cat] ?? const <ReportItem>[];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: Card(
-                child: ExpansionTile(
-                  title: Text(
-                    cat,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: 'Search categories...',
+                        suffixIcon: _search.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _search = '';
+                                    _controller.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (v) => setState(() => _search = v),
                     ),
-                  ),
-                  subtitle: Text(
-                    '${items.length} file(s)',
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
-                  ),
-                  children: items.isEmpty
-                      ? [
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'No reports in this category yet.',
-                                style: theme.textTheme.bodySmall,
-                              ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (_selectedCategory == null) ...[
+                      if (filteredCategories.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Text(
+                            'No categories match your search.',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        )
+                      else
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: filteredCategories.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final c = filteredCategories[index];
+                              final count = byCategory[c]?.length ?? 0;
+                              return ListTile(
+                                title: Text(c),
+                                subtitle: Text('$count file(s)'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () =>
+                                    setState(() => _selectedCategory = c),
+                              );
+                            },
+                          ),
+                        ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedCategory!,
+                              style: theme.textTheme.bodyLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
-                        ]
-                      : items
-                          .map(
-                            (r) => ListTile(
+                          TextButton(
+                            onPressed: () => setState(() {
+                              _selectedCategory = null;
+                              _controller.clear();
+                              _search = '';
+                            }),
+                            child: const Text('Change'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (_selectedCategory == null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Text(
+                    'Select a category above to view reports for that category.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              )
+            else
+              Builder(builder: (context) {
+                final items =
+                    byCategory[_selectedCategory!] ?? const <ReportItem>[];
+                if (items.isEmpty) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'No reports in this category yet.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: items
+                      .map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Card(
+                            child: ListTile(
                               title: Text(
                                 r.originalName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                DateTime.fromMillisecondsSinceEpoch(r.createdAtMs)
+                                DateTime.fromMillisecondsSinceEpoch(
+                                        r.createdAtMs)
                                     .toLocal()
                                     .toString(),
                                 maxLines: 1,
@@ -597,7 +694,9 @@ class _ReportsSection extends ConsumerWidget {
                                 } catch (e) {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Unable to open file: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Unable to open file: $e')),
                                   );
                                 }
                               },
@@ -605,17 +704,19 @@ class _ReportsSection extends ConsumerWidget {
                                 icon: const Icon(Icons.delete_outline),
                                 onPressed: () async {
                                   await ref
-                                      .read(reportsProvider(userId).notifier)
+                                      .read(reportsProvider(widget.userId)
+                                          .notifier)
                                       .deleteReport(r.id);
                                 },
                               ),
                             ),
-                          )
-                          .toList(),
-                ),
-              ),
-            );
-          }).toList(),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              }),
+          ],
         );
       },
     );
