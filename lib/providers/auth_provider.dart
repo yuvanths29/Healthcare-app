@@ -15,10 +15,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
 
   Future<({bool ok, String? message})> login({
     required String email,
+    required String mobile,
     required String password,
   }) async {
-    final result =
-        await AuthStorage.loginUser(email: email, password: password);
+    final result = await AuthStorage.loginUser(
+      email: email,
+      mobile: mobile,
+      password: password,
+    );
     if (result.ok && result.session != null) {
       state = AsyncValue.data(result.session);
       return (ok: true, message: null);
@@ -38,11 +42,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
   Future<({bool ok, String? message})> signUp({
     required String name,
     required String email,
+    required String mobile,
     required String password,
   }) async {
     final result = await AuthStorage.signUpUser(
       name: name,
       email: email,
+      mobile: mobile,
       password: password,
     );
     if (!result.ok) {

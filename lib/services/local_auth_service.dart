@@ -7,7 +7,7 @@ import '../models/user.dart';
 class LocalAuthService {
   static const String _databaseName = 'healthcare_auth.db';
   static const String _tableName = 'users';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static final LocalAuthService _instance = LocalAuthService._internal();
 
@@ -20,12 +20,19 @@ class LocalAuthService {
 
   LocalAuthService._internal();
 
-  Future<User?> authenticateUser(String email, String password) async {
+  Future<User?> authenticateUser(String emailOrMobile, String password) async {
     try {
+      if (!_initialized) {
+        await initialize();
+      }
+
+      final identifier = emailOrMobile.trim().toLowerCase();
+      if (identifier.isEmpty) return null;
+
       final result = await _db.query(
         _tableName,
-        where: 'email = ?',
-        whereArgs: [email.toLowerCase()],
+        where: 'email = ? OR mobile = ?',
+        whereArgs: [identifier, identifier],
       );
 
       if (result.isEmpty) return null;
@@ -60,12 +67,18 @@ class LocalAuthService {
   Future<User> createUser({
     required String name,
     required String email,
+    required String mobile,
     required String password,
   }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
     final user = User(
       userId: _generateUserId(),
       name: name,
       email: email.toLowerCase(),
+      mobile: mobile,
       password: password,
     );
 
@@ -78,6 +91,7 @@ class LocalAuthService {
           'id': user.userId,
           'name': user.name,
           'email': user.email,
+          'mobile': user.mobile,
           'password': hashedPassword,
           'createdAt': DateTime.now().millisecondsSinceEpoch,
         },
@@ -115,6 +129,10 @@ class LocalAuthService {
 
   Future<User?> getUserById(String userId) async {
     try {
+      if (!_initialized) {
+        await initialize();
+      }
+
       final result = await _db.query(
         _tableName,
         where: 'id = ?',
@@ -140,6 +158,7 @@ class LocalAuthService {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
 
     _initialized = true;
@@ -150,6 +169,10 @@ class LocalAuthService {
     required String newPassword,
   }) async {
     try {
+      if (!_initialized) {
+        await initialize();
+      }
+
       final hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
 
       final count = await _db.update(
@@ -166,10 +189,15 @@ class LocalAuthService {
   }
 
   Future<bool> userExists(String email) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    final identifier = email.trim().toLowerCase();
     final result = await _db.query(
       _tableName,
-      where: 'email = ?',
-      whereArgs: [email.toLowerCase()],
+      where: 'email = ? OR mobile = ?',
+      whereArgs: [identifier, identifier],
     );
     return result.isNotEmpty;
   }
@@ -186,9 +214,19 @@ class LocalAuthService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
+        mobile TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         createdAt INTEGER NOT NULL
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE $_tableName ADD COLUMN mobile TEXT');
+      await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_mobile ON $_tableName(mobile)',
+      );
+    }
   }
 }

@@ -1,13 +1,13 @@
 import 'dart:convert';
 
+import 'package:bcrypt/bcrypt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
-import 'local_auth_service.dart';
 
 class AuthStorage {
+  static const String _usersKey = 'localdb.users.v1';
   static const String _sessionKey = 'localdb.session.v1';
-  static bool _dbInitialized = false;
 
   static Future<Session?> getSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -22,55 +22,80 @@ class AuthStorage {
     }
   }
 
-  static Future<void> initializeDatabase() async {
-    if (_dbInitialized) return;
-    try {
-      await LocalAuthService().initialize();
-      _dbInitialized = true;
-    } catch (e) {
-      print('Error initializing local auth database: $e');
-    }
+  static Future<bool> hasAnyUser() async {
+    final users = await _getUsers();
+    return users.isNotEmpty;
   }
 
   static Future<({bool ok, Session? session, String? message})> loginUser({
     required String email,
+    required String mobile,
     required String password,
   }) async {
-    await initializeDatabase();
-
-    final identifier = email.trim();
-    final lowerEmail = identifier.toLowerCase();
+    final trimmedEmail = email.trim();
+    final trimmedMobile = mobile.trim();
+    final identifier = trimmedEmail.isNotEmpty ? trimmedEmail : trimmedMobile;
+    final lowerIdentifier = identifier.toLowerCase();
 
     if (identifier.isEmpty || password.isEmpty) {
       return (
         ok: false,
         session: null,
-        message: 'Please enter email/user id and password.'
+        message: 'Please enter email or mobile number and password.'
+      );
+    }
+
+    if (trimmedEmail.isNotEmpty && !trimmedEmail.contains('@')) {
+      return (ok: false, session: null, message: 'Please enter a valid email.');
+    }
+
+    if (trimmedMobile.isNotEmpty && !_isValidMobile(trimmedMobile)) {
+      return (
+        ok: false,
+        session: null,
+        message: 'Please enter a valid mobile number.'
       );
     }
 
     try {
-      final authService = LocalAuthService();
+      final users = await _getUsers();
+      final User? user = users.cast<User?>().firstWhere(
+            (u) =>
+                u != null &&
+                (u.email.toLowerCase() == lowerIdentifier || u.mobile == identifier),
+            orElse: () => null,
+          );
 
-      // Try to authenticate with email and password
-      User? user = await authService.authenticateUser(lowerEmail, password);
-
-      // If not found by email, try by userId
       if (user == null) {
-        user = await authService.getUserById(identifier);
-        if (user != null && user.password != password) {
-          user = null;
-        }
+        return (ok: false, session: null, message: 'Account not found. Please sign up.');
       }
 
-      if (user == null) {
-        return (ok: false, session: null, message: 'Invalid email or password');
+      final stored = user.password;
+      final passwordOk = stored.startsWith(r'$2')
+          ? BCrypt.checkpw(password, stored)
+          : stored == password;
+
+      if (!passwordOk) {
+        return (ok: false, session: null, message: 'Invalid credentials');
+      }
+
+      // If both email and mobile were entered, ensure they belong to same account
+      if (trimmedEmail.isNotEmpty && trimmedMobile.isNotEmpty) {
+        if (user.email.toLowerCase() != trimmedEmail.toLowerCase() ||
+            user.mobile != trimmedMobile) {
+          return (
+            ok: false,
+            session: null,
+            message: 'Invalid credentials'
+          );
+        }
       }
 
       final session = Session(
         userId: user.userId,
         email: user.email,
         name: user.name,
+        mobile: user.mobile,
       );
       await _saveSession(session);
 
@@ -94,24 +119,36 @@ class AuthStorage {
     required String email,
     required String newPassword,
   }) async {
-    await initializeDatabase();
+    final identifier = email.trim();
+    final lowerIdentifier = identifier.toLowerCase();
 
-    final trimmedEmail = email.trim().toLowerCase();
-
-    if (trimmedEmail.isEmpty || newPassword.isEmpty) {
-      return (ok: false, message: 'Please provide email and new password.');
+    if (identifier.isEmpty || newPassword.isEmpty) {
+      return (
+        ok: false,
+        message: 'Please provide email/mobile and new password.',
+      );
     }
 
     try {
-      final authService = LocalAuthService();
-      final success = await authService.updatePassword(
-        email: trimmedEmail,
-        newPassword: newPassword,
+      final users = await _getUsers();
+      final index = users.indexWhere(
+        (u) => u.email.toLowerCase() == lowerIdentifier || u.mobile == identifier,
       );
 
-      if (!success) {
-        return (ok: false, message: 'No user found for that email.');
+      if (index < 0) {
+        return (ok: false, message: 'No user found for that email/mobile.');
       }
+
+      final existing = users[index];
+      final hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+      users[index] = User(
+        userId: existing.userId,
+        name: existing.name,
+        email: existing.email,
+        mobile: existing.mobile,
+        password: hashedPassword,
+      );
+      await _saveUsers(users);
 
       return (ok: true, message: null);
     } catch (e) {
@@ -123,41 +160,70 @@ class AuthStorage {
   static Future<({bool ok, Session? session, String? message})> signUpUser({
     required String name,
     required String email,
+    required String mobile,
     required String password,
   }) async {
-    await initializeDatabase();
-
     final trimmedEmail = email.trim().toLowerCase();
     final trimmedName = name.trim();
+    final trimmedMobile = mobile.trim();
 
-    if (trimmedName.isEmpty || trimmedEmail.isEmpty || password.isEmpty) {
+    if (trimmedName.isEmpty ||
+        trimmedEmail.isEmpty ||
+        trimmedMobile.isEmpty ||
+        password.isEmpty) {
       return (ok: false, session: null, message: 'Please fill all fields.');
     }
 
-    try {
-      final authService = LocalAuthService();
+    if (!trimmedEmail.contains('@')) {
+      return (
+        ok: false,
+        session: null,
+        message: 'Please enter a valid email.'
+      );
+    }
 
-      // Check if user already exists
-      final userExists = await authService.userExists(trimmedEmail);
-      if (userExists) {
+    if (!_isValidMobile(trimmedMobile)) {
+      return (
+        ok: false,
+        session: null,
+        message: 'Please enter a valid mobile number.'
+      );
+    }
+
+    try {
+      final users = await _getUsers();
+
+      final emailExists = users.any((u) => u.email.toLowerCase() == trimmedEmail);
+      if (emailExists) {
+        return (ok: false, session: null, message: 'User already exists. Please login.');
+      }
+
+      final mobileExists = users.any((u) => u.mobile == trimmedMobile);
+      if (mobileExists) {
         return (
           ok: false,
           session: null,
-          message: 'User already exists. Please login.'
+          message: 'Mobile number already exists. Please login.',
         );
       }
 
-      // Create new user in database
-      final user = await authService.createUser(
+      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+      final user = User(
+        userId: _generateUserId(),
         name: trimmedName,
         email: trimmedEmail,
-        password: password,
+        mobile: trimmedMobile,
+        password: hashedPassword,
       );
+
+      users.add(user);
+      await _saveUsers(users);
 
       final session = Session(
         userId: user.userId,
         email: user.email,
         name: user.name,
+        mobile: user.mobile,
       );
       await _saveSession(session);
 
@@ -182,5 +248,40 @@ class AuthStorage {
   static Future<void> _saveSession(Session session) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
+  }
+
+  static Future<List<User>> _getUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_usersKey);
+    if (raw == null || raw.trim().isEmpty) return [];
+
+    try {
+      final parsed = jsonDecode(raw);
+      if (parsed is! List) return [];
+      return parsed
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .map(User.fromJson)
+          .toList(growable: true);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> _saveUsers(List<User> users) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(users.map((u) => u.toJson()).toList());
+    await prefs.setString(_usersKey, raw);
+  }
+
+  static String _generateUserId() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    final random = (DateTime.now().microsecond % 10000).toRadixString(36);
+    return 'U-$timestamp-$random'.toUpperCase();
+  }
+
+  static bool _isValidMobile(String value) {
+    final trimmed = value.trim();
+    return RegExp(r'^\d{10,15}$').hasMatch(trimmed);
   }
 }

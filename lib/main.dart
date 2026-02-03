@@ -4,15 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/theme_provider.dart';
 import 'router.dart';
-import 'services/auth_storage.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Pre-initialize SharedPreferences to prevent delays
   await SharedPreferences.getInstance();
-  // Initialize local authentication database
-  await AuthStorage.initializeDatabase();
   runApp(const ProviderScope(child: HealthcareApp()));
 }
 

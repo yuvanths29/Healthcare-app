@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/auth_provider.dart';
+import 'services/auth_storage.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -29,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/reset-password';
       final isSplashRoute = state.matchedLocation == '/';
       final isPermissionsRoute = state.matchedLocation == '/permissions';
+      final hasUsers = await AuthStorage.hasAnyUser();
 
       // If still loading but on splash, allow it briefly then timeout
       if (isLoading && isSplashRoute) {
@@ -39,6 +41,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If loading (shouldn't happen due to timeout) but not on splash, go to login
       if (isLoading) {
         return '/login';
+      }
+
+      // Fresh install / no registered users: force signup.
+      if (!hasUsers && state.matchedLocation != '/signup') {
+        return '/signup';
       }
 
       // Redirect to login if not logged in and not already on login

@@ -34,12 +34,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 Text('Reset your password',
                     style: theme.textTheme.headlineSmall),
                 const SizedBox(height: AppSpacing.md),
-                Text('Email', style: theme.textTheme.bodyLarge),
+                Text('Email / Mobile', style: theme.textTheme.bodyLarge),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _emailController,
                   decoration:
-                      const InputDecoration(hintText: 'Enter your email'),
+                      const InputDecoration(hintText: 'Enter your email or mobile'),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                 ),

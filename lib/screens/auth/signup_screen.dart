@@ -16,6 +16,7 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _mobileController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _error;
   bool _loading = false;
@@ -59,6 +60,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     hintText: 'Enter your email',
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text('Mobile Number', style: theme.textTheme.bodyLarge),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _mobileController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter your mobile number',
+                  ),
+                  keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -172,6 +184,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _mobileController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -206,9 +219,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     try {
       final name = _nameController.text.trim();
       final email = _emailController.text.trim();
+      final mobile = _mobileController.text.trim();
       final password = _passwordController.text;
 
-      if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      if (name.isEmpty || email.isEmpty || mobile.isEmpty || password.isEmpty) {
         setState(() {
           _error = 'Please fill all fields.';
           _loading = false;
@@ -219,6 +233,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       if (!email.contains('@')) {
         setState(() {
           _error = 'Please enter a valid email.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (!RegExp(r'^\d{10,15}$').hasMatch(mobile)) {
+        setState(() {
+          _error = 'Please enter a valid mobile number.';
           _loading = false;
         });
         return;
@@ -235,6 +257,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final result = await ref.read(authProvider.notifier).signUp(
             name: name,
             email: email,
+            mobile: mobile,
             password: password,
           );
 

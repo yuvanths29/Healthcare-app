@@ -14,6 +14,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
+  final _mobileController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _error;
   bool _loading = false;
@@ -48,6 +49,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'Enter email or user id',
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Mobile Number',
+                  style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _mobileController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter mobile number (or leave empty if using email)',
+                  ),
+                  keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -136,6 +151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _emailController.dispose();
+    _mobileController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -147,9 +163,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
+      final email = _emailController.text.trim();
+      final mobile = _mobileController.text.trim();
+      final password = _passwordController.text;
+
+      if (email.isEmpty && mobile.isEmpty) {
+        setState(() {
+          _error = 'Please enter email or mobile number.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (email.isNotEmpty && !email.contains('@')) {
+        setState(() {
+          _error = 'Please enter a valid email.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (mobile.isNotEmpty &&
+          !RegExp(r'^\d{10,15}$').hasMatch(mobile)) {
+        setState(() {
+          _error = 'Please enter a valid mobile number.';
+          _loading = false;
+        });
+        return;
+      }
+
+      if (password.isEmpty) {
+        setState(() {
+          _error = 'Please enter your password.';
+          _loading = false;
+        });
+        return;
+      }
+
       final result = await ref.read(authProvider.notifier).login(
-            email: _emailController.text,
-            password: _passwordController.text,
+            email: email,
+            mobile: mobile,
+            password: password,
           );
 
       if (!mounted) return;
