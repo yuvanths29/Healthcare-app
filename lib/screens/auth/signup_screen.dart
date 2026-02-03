@@ -25,7 +25,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final password = _passwordController.text;
-    final strength = password.isNotEmpty ? _getPasswordStrength(password) : null;
+    final strength =
+        password.isNotEmpty ? _getPasswordStrength(password) : null;
 
     return Scaffold(
       body: SafeArea(
@@ -101,7 +102,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         ),
                         const SizedBox(height: 6),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusFull),
                           child: LinearProgressIndicator(
                             value: strength.score / 5,
                             minHeight: 6,
@@ -137,6 +139,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ElevatedButton(
                   onPressed: _loading ? null : _onSignup,
                   child: Text(_loading ? 'Saving...' : 'Create Account'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextButton(
+                  onPressed: () => context.go('/join-family'),
+                  child: const Text('Join Existing Family'),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Row(

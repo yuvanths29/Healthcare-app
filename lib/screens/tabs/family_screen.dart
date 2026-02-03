@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../models/family_member.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/family_provider.dart';
-import '../../theme/app_spacing.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class FamilyScreen extends ConsumerStatefulWidget {
   const FamilyScreen({super.key});
@@ -15,54 +18,9 @@ class FamilyScreen extends ConsumerStatefulWidget {
 class _FamilyScreenState extends ConsumerState<FamilyScreen> {
   final _nameController = TextEditingController();
   final _relationController = TextEditingController();
-  final _ageController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   String? _selectedId;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _relationController.dispose();
-    _ageController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Color _getAvatarColor(String name) {
-    final index = name.isNotEmpty
-        ? name.codeUnitAt(0) % AppColors.avatarColors.length
-        : 0;
-    return AppColors.avatarColors[index];
-  }
-
-  Future<void> _addMember() async {
-    if (_nameController.text.trim().isEmpty ||
-        _relationController.text.trim().isEmpty) {
-      return;
-    }
-
-    await ref.read(familyMembersProvider.notifier).addMember(
-          name: _nameController.text.trim(),
-          relation: _relationController.text.trim(),
-          age: _ageController.text.trim().isNotEmpty
-              ? _ageController.text.trim()
-              : null,
-          email: _emailController.text.trim().isNotEmpty
-              ? _emailController.text.trim()
-              : null,
-          phone: _phoneController.text.trim().isNotEmpty
-              ? _phoneController.text.trim()
-              : null,
-        );
-
-    _nameController.clear();
-    _relationController.clear();
-    _ageController.clear();
-    _emailController.clear();
-    _phoneController.clear();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,19 +83,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextField(
-                        controller: _ageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Age (optional)',
-                        ),
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _addMember(),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
                         controller: _emailController,
                         decoration: const InputDecoration(
-                          hintText: 'Email Address',
+                          hintText: 'Email Address (optional)',
                         ),
                         textInputAction: TextInputAction.next,
                       ),
@@ -229,7 +177,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
 
                   return Column(
                     children: members.map((member) {
-                      final isSelected = member.id == _selectedId;
+                      final isSelected = member.memberId == _selectedId;
                       final avatarColor = _getAvatarColor(member.name);
 
                       return Padding(
@@ -247,7 +195,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                           ),
                           child: InkWell(
                             onTap: () => setState(() {
-                              _selectedId = isSelected ? null : member.id;
+                              _selectedId = isSelected ? null : member.memberId;
                             }),
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.radiusLg),
@@ -292,7 +240,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                             const SizedBox(
                                                 height: AppSpacing.xs),
                                             Text(
-                                              '${member.relation}${member.age != null ? ' • ${member.age} years' : ''}',
+                                              member.relation,
                                               style: theme.textTheme.bodySmall
                                                   ?.copyWith(
                                                 fontSize: 13,
@@ -327,12 +275,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                         ),
                                       ),
                                       ElevatedButton(
-                                        onPressed: () {
-                                          ref
-                                              .read(familyMembersProvider
-                                                  .notifier)
-                                              .removeMember(member.id);
-                                        },
+                                        onPressed: () => _handleDeleteMember(
+                                          context,
+                                          members,
+                                          member,
+                                        ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppColors.danger,
                                           padding: const EdgeInsets.symmetric(
@@ -366,7 +313,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                           child: ElevatedButton.icon(
                                             onPressed: () {
                                               context.push(
-                                                  '/family-member/${member.id}');
+                                                  '/family-member/${member.memberId}');
                                             },
                                             icon: const Text('👤',
                                                 style: TextStyle(fontSize: 16)),
@@ -418,7 +365,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               Center(
                 child: Text(
                   _selectedId != null
-                      ? '✨ Selected: ${membersState.maybeWhen(data: (m) => m.firstWhere((x) => x.id == _selectedId).name, orElse: () => '')}'
+                      ? '✨ Selected: ${membersState.maybeWhen(data: (m) => m.firstWhere((x) => x.memberId == _selectedId).name, orElse: () => '')}'
                       : '💡 Tip: Tap a member to view profile & reports',
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
                 ),
@@ -428,5 +375,119 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _addMember() async {
+    if (_nameController.text.trim().isEmpty ||
+        _relationController.text.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      final authState = ref.read(authProvider);
+      final loggedInMemberId = authState.value?.memberId;
+
+      await ref.read(familyMembersProvider.notifier).addMember(
+            name: _nameController.text.trim(),
+            relation: _relationController.text.trim(),
+            email: _emailController.text.trim().isNotEmpty
+                ? _emailController.text.trim()
+                : null,
+            phone: _phoneController.text.trim().isNotEmpty
+                ? _phoneController.text.trim()
+                : null,
+            loggedInMemberId: loggedInMemberId,
+          );
+
+      _nameController.clear();
+      _relationController.clear();
+      _emailController.clear();
+      _phoneController.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
+  }
+
+  Color _getAvatarColor(String name) {
+    final index = name.isNotEmpty
+        ? name.codeUnitAt(0) % AppColors.avatarColors.length
+        : 0;
+    return AppColors.avatarColors[index];
+  }
+
+  Future<void> _handleDeleteMember(
+    BuildContext context,
+    List<FamilyMember> allMembers,
+    FamilyMember memberToDelete,
+  ) async {
+    final authState = ref.read(authProvider);
+    final loggedInMemberId = authState.value?.memberId;
+
+    if (loggedInMemberId == memberToDelete.memberId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'You cannot delete your own profile while logged in. Please log out first if you want to delete your account.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    final hasChildren = allMembers.any(
+        (m) => m.parentId != null && m.parentId == memberToDelete.memberId);
+
+    if (hasChildren) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('This member has children. Remove or reassign them first.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final String confirmMessage = memberToDelete.hasAccount
+        ? 'This member has an active account. Deleting will remove their access. Are you sure?'
+        : 'Are you sure you want to delete this family member?';
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Member'),
+        content: Text(confirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      try {
+        await ref.read(familyMembersProvider.notifier).removeMember(
+              memberToDelete.memberId,
+              loggedInMemberId: loggedInMemberId,
+            );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          );
+        }
+      }
+    }
   }
 }

@@ -18,16 +18,37 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
     required String mobile,
     required String password,
   }) async {
-    final result = await AuthStorage.loginUser(
-      email: email,
-      mobile: mobile,
-      password: password,
-    );
-    if (result.ok && result.session != null) {
-      state = AsyncValue.data(result.session);
-      return (ok: true, message: null);
+    try {
+      final identifier = email.isNotEmpty ? email : mobile;
+
+      if (identifier.isEmpty || password.isEmpty) {
+        return (
+          ok: false,
+          message: 'Please enter email or mobile number and password.'
+        );
+      }
+
+      try {
+        final result = await AuthStorage.loginUser(
+          email: email,
+          mobile: mobile,
+          password: password,
+        );
+
+        if (result.ok && result.session != null) {
+          state = AsyncValue.data(result.session);
+          return (ok: true, message: null);
+        }
+
+        return (ok: false, message: result.message);
+      } catch (e) {
+        print('Login error: $e');
+        return (ok: false, message: 'An error occurred during login');
+      }
+    } catch (e) {
+      print('Login error: $e');
+      return (ok: false, message: 'An error occurred during login');
     }
-    return (ok: false, message: result.message);
   }
 
   Future<void> logout() async {

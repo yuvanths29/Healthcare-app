@@ -46,7 +46,15 @@ class AuthStorage {
     }
 
     if (trimmedEmail.isNotEmpty && !trimmedEmail.contains('@')) {
-      return (ok: false, session: null, message: 'Please enter a valid email.');
+      // If it looks like a phone or user ID, don't reject it yet
+      if (!RegExp(r'^\d{10,15}$').hasMatch(trimmedEmail) &&
+          !trimmedEmail.toUpperCase().startsWith('U-')) {
+        return (
+          ok: false,
+          session: null,
+          message: 'Please enter a valid email.'
+        );
+      }
     }
 
     if (trimmedMobile.isNotEmpty && !_isValidMobile(trimmedMobile)) {
@@ -62,12 +70,18 @@ class AuthStorage {
       final User? user = users.cast<User?>().firstWhere(
             (u) =>
                 u != null &&
-                (u.email.toLowerCase() == lowerIdentifier || u.mobile == identifier),
+                (u.email.toLowerCase() == lowerIdentifier ||
+                    u.mobile == identifier ||
+                    u.userId.toUpperCase() == lowerIdentifier),
             orElse: () => null,
           );
 
       if (user == null) {
-        return (ok: false, session: null, message: 'Account not found. Please sign up.');
+        return (
+          ok: false,
+          session: null,
+          message: 'Account not found. Please sign up.'
+        );
       }
 
       final stored = user.password;
@@ -81,13 +95,9 @@ class AuthStorage {
 
       // If both email and mobile were entered, ensure they belong to same account
       if (trimmedEmail.isNotEmpty && trimmedMobile.isNotEmpty) {
-        if (user.email.toLowerCase() != trimmedEmail.toLowerCase() ||
+        if (user.email.toLowerCase() != trimmedEmail.toLowerCase() &&
             user.mobile != trimmedMobile) {
-          return (
-            ok: false,
-            session: null,
-            message: 'Invalid credentials'
-          );
+          return (ok: false, session: null, message: 'Invalid credentials');
         }
       }
 
@@ -132,7 +142,8 @@ class AuthStorage {
     try {
       final users = await _getUsers();
       final index = users.indexWhere(
-        (u) => u.email.toLowerCase() == lowerIdentifier || u.mobile == identifier,
+        (u) =>
+            u.email.toLowerCase() == lowerIdentifier || u.mobile == identifier,
       );
 
       if (index < 0) {
@@ -157,6 +168,10 @@ class AuthStorage {
     }
   }
 
+  static Future<void> saveSession(Session session) async {
+    await _saveSession(session);
+  }
+
   static Future<({bool ok, Session? session, String? message})> signUpUser({
     required String name,
     required String email,
@@ -175,11 +190,7 @@ class AuthStorage {
     }
 
     if (!trimmedEmail.contains('@')) {
-      return (
-        ok: false,
-        session: null,
-        message: 'Please enter a valid email.'
-      );
+      return (ok: false, session: null, message: 'Please enter a valid email.');
     }
 
     if (!_isValidMobile(trimmedMobile)) {
@@ -193,9 +204,14 @@ class AuthStorage {
     try {
       final users = await _getUsers();
 
-      final emailExists = users.any((u) => u.email.toLowerCase() == trimmedEmail);
+      final emailExists =
+          users.any((u) => u.email.toLowerCase() == trimmedEmail);
       if (emailExists) {
-        return (ok: false, session: null, message: 'User already exists. Please login.');
+        return (
+          ok: false,
+          session: null,
+          message: 'User already exists. Please login.'
+        );
       }
 
       final mobileExists = users.any((u) => u.mobile == trimmedMobile);
@@ -245,9 +261,10 @@ class AuthStorage {
     }
   }
 
-  static Future<void> _saveSession(Session session) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
+  static String _generateUserId() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    final random = (DateTime.now().microsecond % 10000).toRadixString(36);
+    return 'U-$timestamp-$random'.toUpperCase();
   }
 
   static Future<List<User>> _getUsers() async {
@@ -268,20 +285,19 @@ class AuthStorage {
     }
   }
 
+  static bool _isValidMobile(String value) {
+    final trimmed = value.trim();
+    return RegExp(r'^\d{10,15}$').hasMatch(trimmed);
+  }
+
+  static Future<void> _saveSession(Session session) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
+  }
+
   static Future<void> _saveUsers(List<User> users) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(users.map((u) => u.toJson()).toList());
     await prefs.setString(_usersKey, raw);
-  }
-
-  static String _generateUserId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final random = (DateTime.now().microsecond % 10000).toRadixString(36);
-    return 'U-$timestamp-$random'.toUpperCase();
-  }
-
-  static bool _isValidMobile(String value) {
-    final trimmed = value.trim();
-    return RegExp(r'^\d{10,15}$').hasMatch(trimmed);
   }
 }

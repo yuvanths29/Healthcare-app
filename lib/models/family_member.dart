@@ -1,50 +1,72 @@
 class FamilyMember {
-  final String id;
   final String memberId;
   final String name;
   final String relation;
-  final String? age;
-  final String? email;
+  final String? parentId;
   final String? phone;
-  final String? latestCheckupDate;
-  final List<String> latestReports;
+  final String? email;
+  final bool hasAccount;
 
   FamilyMember({
-    required this.id,
     required this.memberId,
     required this.name,
     required this.relation,
-    this.age,
-    this.email,
+    this.parentId,
     this.phone,
-    this.latestCheckupDate,
-    this.latestReports = const [],
+    this.email,
+    this.hasAccount = false,
   });
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'memberId': memberId,
-        'name': name,
-        'relation': relation,
-        if (age != null) 'age': age,
-        if (email != null) 'email': email,
-        if (phone != null) 'phone': phone,
-        if (latestCheckupDate != null) 'latestCheckupDate': latestCheckupDate,
-        'latestReports': latestReports,
-      };
+  factory FamilyMember.fromMap(Map<String, dynamic> map) {
+    final dynamic rawHasAccount = map['hasAccount'];
+    final bool hasAcc = rawHasAccount is int
+        ? rawHasAccount == 1
+        : (rawHasAccount as bool? ?? false);
 
-  factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
-        id: json['id'] as String? ?? '',
-        memberId: json['memberId'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        relation: json['relation'] as String? ?? '',
-        age: json['age'] as String?,
-        email: json['email'] as String?,
-        phone: json['phone'] as String?,
-        latestCheckupDate: json['latestCheckupDate'] as String?,
-        latestReports: (json['latestReports'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [],
-      );
+    return FamilyMember(
+      memberId: map['memberId'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+      relation: map['relation'] as String? ?? '',
+      parentId: map['parentId'] as String?,
+      phone: map['phone'] as String?,
+      email: map['email'] as String?,
+      hasAccount: hasAcc,
+    );
+  }
+
+  FamilyMember copyWith({
+    String? memberId,
+    String? name,
+    String? relation,
+    String? parentId,
+    String? phone,
+    String? email,
+    bool? hasAccount,
+  }) {
+    return FamilyMember(
+      memberId: memberId ?? this.memberId,
+      name: name ?? this.name,
+      relation: relation ?? this.relation,
+      parentId: parentId ?? this.parentId,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      hasAccount: hasAccount ?? this.hasAccount,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'memberId': memberId,
+      'name': name,
+      'relation': relation,
+      'parentId': parentId,
+      'phone': phone,
+      'email': email,
+      'hasAccount': hasAccount ? 1 : 0,
+    };
+  }
+
+  @override
+  String toString() =>
+      'FamilyMember(memberId: $memberId, name: $name, relation: $relation, parentId: $parentId, phone: $phone, email: $email, hasAccount: $hasAccount)';
 }

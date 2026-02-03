@@ -1,58 +1,42 @@
-import 'dart:convert';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/family_member.dart';
+import 'local_database.dart';
 
 class FamilyStorage {
-  static const String _storageKey = 'familyMembers.v1';
-
   static Future<void> addMember({
     required String name,
     required String relation,
-    String? age,
-    String? email,
     String? phone,
+    String? email,
+    String? parentId,
   }) async {
-    final members = await readMembers();
+    final db = LocalDatabase.instance;
     final newMember = FamilyMember(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
       memberId: _createMemberId(),
       name: name,
       relation: relation,
-      age: age,
-      email: email,
+      parentId: parentId,
       phone: phone,
+      email: email,
+      hasAccount: false,
     );
-    await writeMembers([newMember, ...members]);
+    await db.insertFamilyMember(newMember);
   }
 
   static Future<List<FamilyMember>> readMembers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw == null) return [];
-
-    try {
-      final List<dynamic> parsed = jsonDecode(raw);
-      return parsed
-          .whereType<Map<String, dynamic>>()
-          .map((item) => FamilyMember.fromJson(item))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+    final db = LocalDatabase.instance;
+    return await db.getAllFamilyMembers();
   }
 
-  static Future<void> removeMember(String id) async {
-    final members = await readMembers();
-    final updated = members.where((m) => m.id != id).toList();
-    await writeMembers(updated);
+  static Future<void> removeMember(String memberId) async {
+    final db = LocalDatabase.instance;
+    await db.deleteFamilyMember(memberId);
   }
 
   static Future<void> writeMembers(List<FamilyMember> members) async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = members.map((m) => m.toJson()).toList();
-    await prefs.setString(_storageKey, jsonEncode(data));
+    final db = LocalDatabase.instance;
+    for (final member in members) {
+      await db.updateFamilyMember(member);
+    }
   }
 
   static String _createMemberId() {

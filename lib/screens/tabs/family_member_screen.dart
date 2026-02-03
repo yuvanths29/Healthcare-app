@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../providers/family_provider.dart';
 import '../../theme/app_spacing.dart';
 
@@ -24,7 +25,8 @@ class FamilyMemberScreen extends ConsumerWidget {
       ),
       body: membersState.when(
         data: (members) {
-          final member = members.where((m) => m.id == memberId).firstOrNull;
+          final member =
+              members.where((m) => m.memberId == memberId).firstOrNull;
           if (member == null) {
             return Center(
               child: Column(
@@ -68,21 +70,16 @@ class FamilyMemberScreen extends ConsumerWidget {
                           const SizedBox(height: AppSpacing.xs),
                           Text(
                             member.email!,
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontSize: 13),
                           ),
                         ],
                         if (member.phone != null) ...[
                           const SizedBox(height: AppSpacing.xs),
                           Text(
                             member.phone!,
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 13),
-                          ),
-                        ],
-                        if (member.age != null) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            '${member.age} years',
-                            style: theme.textTheme.bodySmall,
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontSize: 13),
                           ),
                         ],
                         const SizedBox(height: AppSpacing.md),

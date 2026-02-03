@@ -1,9 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/auth_provider.dart';
+import 'screens/auth/join_family_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -16,19 +17,6 @@ import 'screens/tabs/home_screen.dart';
 import 'screens/tabs/profile_screen.dart';
 import 'screens/tabs/scan_screen.dart';
 import 'screens/tabs/tabs_screen.dart';
-
-class _RouterRefreshNotifier extends ChangeNotifier {
-  AsyncValue<dynamic> _authState;
-
-  _RouterRefreshNotifier(this._authState);
-
-  AsyncValue<dynamic> get authState => _authState;
-
-  void update(AsyncValue<dynamic> next) {
-    _authState = next;
-    notifyListeners();
-  }
-}
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefreshNotifier(ref.read(authProvider));
@@ -99,6 +87,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SignupScreen(),
       ),
       GoRoute(
+        path: '/join-family',
+        builder: (context, state) => const JoinFamilyScreen(),
+      ),
+      GoRoute(
         path: '/permissions',
         builder: (context, state) => const PermissionsScreen(),
       ),
@@ -137,3 +129,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  AsyncValue<dynamic> _authState;
+
+  _RouterRefreshNotifier(this._authState);
+
+  AsyncValue<dynamic> get authState => _authState;
+
+  void update(AsyncValue<dynamic> next) {
+    _authState = next;
+    notifyListeners();
+  }
+}

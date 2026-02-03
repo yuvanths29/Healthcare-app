@@ -3,12 +3,14 @@ class Session {
   final String name;
   final String email;
   final String mobile;
+  final String? memberId;
 
   Session({
     required this.userId,
     required this.name,
     required this.email,
     required this.mobile,
+    this.memberId,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -16,6 +18,7 @@ class Session {
         name: json['name'] as String? ?? '',
         email: json['email'] as String? ?? '',
         mobile: json['mobile'] as String? ?? '',
+        memberId: json['memberId'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +26,7 @@ class Session {
         'name': name,
         'email': email,
         'mobile': mobile,
+        'memberId': memberId,
       };
 }
 
