@@ -56,7 +56,8 @@ class AccountNotifier extends StateNotifier<AsyncValue<Account?>> {
       final account = Account(
         accountId: accountId,
         memberId: memberId,
-        emailOrPhone: emailOrPhone,
+        email: emailOrPhone,
+        phone: '',
         passwordHash: hashedPassword,
       );
 
@@ -87,20 +88,24 @@ class AccountNotifier extends StateNotifier<AsyncValue<Account?>> {
   }) async {
     try {
       final db = LocalDatabase.instance;
-      final members = await db.getAllFamilyMembers();
+      final dbInstance = await db.database;
 
       final query = emailOrPhone.trim().toLowerCase();
-      final matchingMember = members.firstWhere(
-        (m) => (m.email?.trim().toLowerCase() == query ||
-            m.phone?.trim().toLowerCase() == query),
-        orElse: () => null as dynamic,
-      ) as FamilyMember?;
 
-      if (matchingMember == null) {
+      // Find member by email or phone
+      final memberRows = await dbInstance.query(
+        'family_members',
+        where: 'LOWER(email) = ? OR LOWER(phone) = ?',
+        whereArgs: [query, query],
+      );
+
+      if (memberRows.isEmpty) {
         return (account: null, member: null, error: 'Invalid credentials');
       }
 
+      final matchingMember = FamilyMember.fromMap(memberRows.first);
       final account = await db.getAccountByMemberId(matchingMember.memberId);
+
       if (account == null) {
         return (account: null, member: null, error: 'Invalid credentials');
       }
@@ -124,16 +129,22 @@ class AccountNotifier extends StateNotifier<AsyncValue<Account?>> {
     try {
       state = const AsyncValue.loading();
       final db = LocalDatabase.instance;
-      final members = await db.getAllFamilyMembers();
+      final dbInstance = await db.database;
 
       final query = phoneOrEmail.trim().toLowerCase();
-      final matching = members.firstWhere(
-        (m) => (m.phone?.trim().toLowerCase() == query ||
-            m.email?.trim().toLowerCase() == query),
-        orElse: () => null as dynamic,
-      ) as FamilyMember?;
 
-      return matching;
+      // Find member by email or phone
+      final memberRows = await dbInstance.query(
+        'family_members',
+        where: 'LOWER(email) = ? OR LOWER(phone) = ?',
+        whereArgs: [query, query],
+      );
+
+      if (memberRows.isEmpty) {
+        return null;
+      }
+
+      return FamilyMember.fromMap(memberRows.first);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
       return null;

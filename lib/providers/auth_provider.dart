@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user.dart';
@@ -10,6 +12,7 @@ final authProvider =
 
 class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
   AuthNotifier() : super(const AsyncValue.loading()) {
+    print('AuthNotifier: initializing, loading session...');
     _loadSession();
   }
 
@@ -42,11 +45,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
 
         return (ok: false, message: result.message);
       } catch (e) {
-        print('Login error: $e');
+        developer.log('Login error: $e', name: 'AuthProvider');
         return (ok: false, message: 'An error occurred during login');
       }
     } catch (e) {
-      print('Login error: $e');
+      developer.log('Login error: $e', name: 'AuthProvider');
       return (ok: false, message: 'An error occurred during login');
     }
   }
@@ -92,13 +95,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<Session?>> {
       final session = await AuthStorage.getSession().timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          print('Auth initialization timeout - proceeding without session');
+          print(
+              'AuthNotifier: Auth initialization timeout - proceeding without session');
+          developer.log(
+              'Auth initialization timeout - proceeding without session',
+              name: 'AuthProvider');
           return null;
         },
       );
+      print('AuthNotifier: Session loaded: $session');
       state = AsyncValue.data(session);
     } catch (e) {
-      print('Auth error: $e');
+      print('AuthNotifier: Auth error: $e');
+      developer.log('Auth error: $e', name: 'AuthProvider');
       // On error, set state to null instead of error to allow app to continue
       state = const AsyncValue.data(null);
     }

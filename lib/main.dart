@@ -10,6 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Pre-initialize SharedPreferences to prevent delays
   await SharedPreferences.getInstance();
+  print('main(): Starting HealthcareApp');
   runApp(const ProviderScope(child: HealthcareApp()));
 }
 
@@ -18,6 +19,7 @@ class HealthcareApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print('HealthcareApp.build(): Building main app widget');
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 

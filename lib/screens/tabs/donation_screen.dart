@@ -67,7 +67,7 @@ class _BloodRequestCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: const Icon(
@@ -107,7 +107,7 @@ class _BloodRequestCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _getUrgencyColor(request.urgency).withOpacity(0.2),
+                  color: _getUrgencyColor(request.urgency).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
                 child: Text(
@@ -319,7 +319,7 @@ class _DonationScreenState extends State<DonationScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     border: Border.all(
                       color: AppColors.primary,

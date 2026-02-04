@@ -42,7 +42,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -82,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 13,
                                 color: theme.textTheme.bodySmall?.color
-                                    ?.withOpacity(0.9),
+                                    ?.withValues(alpha: 0.9),
                               ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
@@ -91,7 +91,7 @@ class HomeScreen extends ConsumerWidget {
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 12,
                                 color: theme.textTheme.bodySmall?.color
-                                    ?.withOpacity(0.7),
+                                    ?.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -104,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
                         vertical: AppSpacing.sm,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.2),
+                        color: AppColors.success.withValues(alpha: 0.2),
                         borderRadius:
                             BorderRadius.circular(AppSpacing.radiusFull),
                       ),
@@ -315,7 +315,7 @@ class _ProfileCompletion extends StatelessWidget {
                           LinearProgressIndicator(
                             value: filled / fields.length,
                             backgroundColor:
-                                theme.dividerColor.withOpacity(0.2),
+                                theme.dividerColor.withValues(alpha: 0.2),
                             minHeight: 8,
                           ),
                         ],
@@ -368,7 +368,7 @@ class _QuickActionCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
                 alignment: Alignment.center,

@@ -2,15 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/family_member.dart';
 import '../services/family_storage.dart';
+import '../services/local_database.dart';
+import 'auth_provider.dart';
 
 final familyMembersProvider = StateNotifierProvider<FamilyMembersNotifier,
     AsyncValue<List<FamilyMember>>>((ref) {
-  return FamilyMembersNotifier();
+  final authState = ref.watch(authProvider);
+  return FamilyMembersNotifier(
+    accountId: authState.value?.accountId,
+  );
 });
 
 class FamilyMembersNotifier
     extends StateNotifier<AsyncValue<List<FamilyMember>>> {
-  FamilyMembersNotifier() : super(const AsyncValue.loading()) {
+  final String? accountId;
+
+  FamilyMembersNotifier({this.accountId}) : super(const AsyncValue.loading()) {
     _loadMembers();
   }
 
@@ -23,7 +30,7 @@ class FamilyMembersNotifier
     String? loggedInMemberId,
   }) async {
     if (relation.trim().toLowerCase() == 'self' && loggedInMemberId != null) {
-      final members = await FamilyStorage.readMembers();
+      final members = await FamilyStorage.readMembers(accountId: accountId);
       final existingSelf = members.firstWhere(
         (m) =>
             m.memberId == loggedInMemberId &&
@@ -37,12 +44,21 @@ class FamilyMembersNotifier
       }
     }
 
+    // Get current user's familyId
+    String? familyId;
+    if (loggedInMemberId != null) {
+      final db = LocalDatabase.instance;
+      final currentMember = await db.getFamilyMemberById(loggedInMemberId);
+      familyId = currentMember?.familyId;
+    }
+
     await FamilyStorage.addMember(
       name: name,
       relation: relation,
       phone: phone,
       email: email,
       parentId: parentId,
+      familyId: familyId,
     );
     await _loadMembers();
   }
@@ -62,7 +78,7 @@ class FamilyMembersNotifier
 
   Future<void> _loadMembers() async {
     try {
-      final members = await FamilyStorage.readMembers();
+      final members = await FamilyStorage.readMembers(accountId: accountId);
       state = AsyncValue.data(members);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

@@ -96,7 +96,7 @@ class AppointmentsList extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.2),
+                              color: AppColors.primary.withValues(alpha: 0.2),
                               borderRadius:
                                   BorderRadius.circular(AppSpacing.radiusFull),
                             ),
@@ -130,7 +130,7 @@ class AppointmentsList extends StatelessWidget {
                               vertical: AppSpacing.xs,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.success.withOpacity(0.2),
+                              color: AppColors.success.withValues(alpha: 0.2),
                               borderRadius:
                                   BorderRadius.circular(AppSpacing.radiusFull),
                             ),

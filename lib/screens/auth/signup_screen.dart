@@ -107,7 +107,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           child: LinearProgressIndicator(
                             value: strength.score / 5,
                             minHeight: 6,
-                            backgroundColor: Colors.white.withOpacity(0.18),
+                            backgroundColor: Colors.white.withValues(alpha: 0.18),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               strength.label == 'Strong'
                                   ? AppColors.success
@@ -140,11 +140,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   onPressed: _loading ? null : _onSignup,
                   child: Text(_loading ? 'Saving...' : 'Create Account'),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                TextButton(
-                  onPressed: () => context.go('/join-family'),
-                  child: const Text('Join Existing Family'),
-                ),
+
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [

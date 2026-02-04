@@ -123,7 +123,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                         vertical: AppSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.2),
+                        color: AppColors.primary.withValues(alpha: 0.2),
                         borderRadius:
                             BorderRadius.circular(AppSpacing.radiusFull),
                       ),
@@ -209,7 +209,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                                         width: 56,
                                         height: 56,
                                         decoration: BoxDecoration(
-                                          color: avatarColor.withOpacity(0.2),
+                                          color: avatarColor.withValues(alpha: 0.2),
                                           borderRadius: BorderRadius.circular(
                                               AppSpacing.radiusFull),
                                         ),
@@ -428,6 +428,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final loggedInMemberId = authState.value?.memberId;
 
     if (loggedInMemberId == memberToDelete.memberId) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -442,6 +443,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         (m) => m.parentId != null && m.parentId == memberToDelete.memberId);
 
     if (hasChildren) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content:
@@ -456,6 +458,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         ? 'This member has an active account. Deleting will remove their access. Are you sure?'
         : 'Are you sure you want to delete this family member?';
 
+    if (!mounted) return;
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -481,12 +484,12 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               loggedInMemberId: loggedInMemberId,
             );
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(e.toString().replaceFirst('Exception: ', ''))),
-          );
-        }
+        if (!mounted) return;
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
       }
     }
   }

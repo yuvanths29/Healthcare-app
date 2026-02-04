@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:bcrypt/bcrypt.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -44,7 +46,7 @@ class LocalAuthService {
 
       return User.fromDbJson(result.first);
     } catch (e) {
-      print('Error authenticating user: $e');
+      developer.log('Error authenticating user: $e', name: 'LocalAuthService');
       return null;
     }
   }
@@ -53,7 +55,7 @@ class LocalAuthService {
     try {
       await _db.delete(_tableName);
     } catch (e) {
-      print('Error clearing users: $e');
+      developer.log('Error clearing users: $e', name: 'LocalAuthService');
     }
   }
 
@@ -98,7 +100,7 @@ class LocalAuthService {
       );
       return user;
     } catch (e) {
-      print('Error creating user: $e');
+      developer.log('Error creating user: $e', name: 'LocalAuthService');
       rethrow;
     }
   }
@@ -112,7 +114,7 @@ class LocalAuthService {
       );
       return count > 0;
     } catch (e) {
-      print('Error deleting user: $e');
+      developer.log('Error deleting user: $e', name: 'LocalAuthService');
       return false;
     }
   }
@@ -122,7 +124,7 @@ class LocalAuthService {
       final result = await _db.query(_tableName);
       return result.map((json) => User.fromDbJson(json)).toList();
     } catch (e) {
-      print('Error fetching all users: $e');
+      developer.log('Error fetching all users: $e', name: 'LocalAuthService');
       return [];
     }
   }
@@ -143,7 +145,7 @@ class LocalAuthService {
 
       return User.fromDbJson(result.first);
     } catch (e) {
-      print('Error fetching user: $e');
+      developer.log('Error fetching user: $e', name: 'LocalAuthService');
       return null;
     }
   }
@@ -183,7 +185,7 @@ class LocalAuthService {
       );
       return count > 0;
     } catch (e) {
-      print('Error updating password: $e');
+      developer.log('Error updating password: $e', name: 'LocalAuthService');
       return false;
     }
   }

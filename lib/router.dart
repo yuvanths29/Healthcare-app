@@ -1,10 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/auth_provider.dart';
-import 'screens/auth/join_family_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -20,13 +18,16 @@ import 'screens/tabs/tabs_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefreshNotifier(ref.read(authProvider));
-  ref.listen(authProvider, (_, next) => refresh.update(next));
+  ref.listen(authProvider, (_, next) {
+    print('routerProvider: authProvider changed: $next');
+    refresh.update(next);
+  });
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     refreshListenable: refresh,
-    redirect: (context, state) async {
+    redirect: (context, state) {
       final authState = refresh.authState;
       final isLoading = authState.isLoading;
       final isLoggedIn = authState.value != null;
@@ -34,39 +35,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/reset-password';
       final isSplashRoute = state.matchedLocation == '/';
-      final isPermissionsRoute = state.matchedLocation == '/permissions';
 
-      // If still loading but on splash, allow it briefly then timeout
-      if (isLoading && isSplashRoute) {
-        // Splash shown for up to 5 seconds (timeout is in auth_provider)
-        return null;
-      }
+      print(
+          'GoRouter redirect: isLoading=$isLoading, isLoggedIn=$isLoggedIn, matchedLocation=${state.matchedLocation}');
 
-      // If loading (shouldn't happen due to timeout) but not on splash, go to login
+      // If still loading, stay on splash
       if (isLoading) {
+        print('GoRouter: Still loading, redirecting to splash if not already');
+        return isSplashRoute ? null : '/';
+      }
+
+      // Redirect to login if not logged in and not already on login/splash
+      if (!isLoggedIn && !isLoginRoute && !isSplashRoute) {
+        print('GoRouter: Not logged in, redirecting to /login');
         return '/login';
       }
 
-      // Redirect to login if not logged in and not already on login
-      if (!isLoggedIn && !isLoginRoute) {
-        return '/login';
+      // If logged in, go to home
+      if (isLoggedIn && isSplashRoute) {
+        print('GoRouter: Logged in, redirecting to /home');
+        return '/home';
       }
 
-      // If logged in, enforce permissions onboarding (only once).
-      if (isLoggedIn) {
-        final prefs = await SharedPreferences.getInstance();
-        final completed =
-            prefs.getBool('onboarding.permissions.completed.v1') ?? false;
-
-        if (!completed && !isPermissionsRoute && !isLoginRoute) {
-          return '/permissions';
-        }
-
-        if (completed && isPermissionsRoute) {
-          return '/home';
-        }
-      }
-
+      print('GoRouter: No redirect needed');
       return null;
     },
     routes: [
@@ -85,10 +76,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
-      ),
-      GoRoute(
-        path: '/join-family',
-        builder: (context, state) => const JoinFamilyScreen(),
       ),
       GoRoute(
         path: '/permissions',

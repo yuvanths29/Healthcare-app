@@ -1,5 +1,6 @@
 class FamilyMember {
   final String memberId;
+  final String familyId;
   final String name;
   final String relation;
   final String? parentId;
@@ -9,6 +10,7 @@ class FamilyMember {
 
   FamilyMember({
     required this.memberId,
+    required this.familyId,
     required this.name,
     required this.relation,
     this.parentId,
@@ -25,6 +27,7 @@ class FamilyMember {
 
     return FamilyMember(
       memberId: map['memberId'] as String? ?? '',
+      familyId: map['familyId'] as String? ?? '',
       name: map['name'] as String? ?? '',
       relation: map['relation'] as String? ?? '',
       parentId: map['parentId'] as String?,
@@ -36,6 +39,7 @@ class FamilyMember {
 
   FamilyMember copyWith({
     String? memberId,
+    String? familyId,
     String? name,
     String? relation,
     String? parentId,
@@ -45,6 +49,7 @@ class FamilyMember {
   }) {
     return FamilyMember(
       memberId: memberId ?? this.memberId,
+      familyId: familyId ?? this.familyId,
       name: name ?? this.name,
       relation: relation ?? this.relation,
       parentId: parentId ?? this.parentId,
@@ -57,6 +62,7 @@ class FamilyMember {
   Map<String, dynamic> toMap() {
     return {
       'memberId': memberId,
+      'familyId': familyId,
       'name': name,
       'relation': relation,
       'parentId': parentId,
@@ -68,5 +74,5 @@ class FamilyMember {
 
   @override
   String toString() =>
-      'FamilyMember(memberId: $memberId, name: $name, relation: $relation, parentId: $parentId, phone: $phone, email: $email, hasAccount: $hasAccount)';
+      'FamilyMember(memberId: $memberId, familyId: $familyId, name: $name, relation: $relation, parentId: $parentId, phone: $phone, email: $email, hasAccount: $hasAccount)';
 }

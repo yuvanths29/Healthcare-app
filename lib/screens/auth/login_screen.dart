@@ -60,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 TextField(
                   controller: _mobileController,
                   decoration: const InputDecoration(
-                    hintText: 'Enter mobile number (or leave empty if using email)',
+                    hintText: 'Enter mobile number',
                   ),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
@@ -167,9 +167,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final mobile = _mobileController.text.trim();
       final password = _passwordController.text;
 
-      if (email.isEmpty && mobile.isEmpty) {
+      if (email.isEmpty || mobile.isEmpty) {
         setState(() {
-          _error = 'Please enter email or mobile number.';
+          _error = 'Please enter both email and mobile number.';
           _loading = false;
         });
         return;

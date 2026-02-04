@@ -74,7 +74,7 @@ class ScanScreen extends ConsumerWidget {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.radiusFull),
                           ),
@@ -406,7 +406,7 @@ class ScanScreen extends ConsumerWidget {
           content: StatefulBuilder(
             builder: (context, setState) {
               return DropdownButtonFormField<String>(
-                value: selected,
+                initialValue: selected,
                 items: _categories
                     .map(
                       (c) => DropdownMenuItem<String>(
@@ -442,6 +442,8 @@ class ScanScreen extends ConsumerWidget {
   }) async {
     final status = await permission.status;
     if (status.isGranted) return true;
+
+    if (!context.mounted) return false;
 
     final proceed = await showDialog<bool>(
       context: context,
@@ -747,7 +749,7 @@ class _StepItem extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
           ),
           alignment: Alignment.center,

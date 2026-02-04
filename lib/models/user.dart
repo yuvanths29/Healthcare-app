@@ -1,5 +1,6 @@
 class Session {
   final String userId;
+  final String accountId;
   final String name;
   final String email;
   final String mobile;
@@ -7,6 +8,7 @@ class Session {
 
   Session({
     required this.userId,
+    required this.accountId,
     required this.name,
     required this.email,
     required this.mobile,
@@ -15,6 +17,7 @@ class Session {
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
         userId: json['userId'] as String? ?? '',
+        accountId: json['accountId'] as String? ?? json['userId'] as String? ?? '',
         name: json['name'] as String? ?? '',
         email: json['email'] as String? ?? '',
         mobile: json['mobile'] as String? ?? '',
@@ -23,6 +26,7 @@ class Session {
 
   Map<String, dynamic> toJson() => {
         'userId': userId,
+        'accountId': accountId,
         'name': name,
         'email': email,
         'mobile': mobile,

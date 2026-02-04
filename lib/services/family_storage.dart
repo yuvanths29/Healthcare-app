@@ -8,10 +8,12 @@ class FamilyStorage {
     String? phone,
     String? email,
     String? parentId,
+    String? familyId,
   }) async {
     final db = LocalDatabase.instance;
     final newMember = FamilyMember(
       memberId: _createMemberId(),
+      familyId: familyId ?? _createFamilyId(),
       name: name,
       relation: relation,
       parentId: parentId,
@@ -22,9 +24,12 @@ class FamilyStorage {
     await db.insertFamilyMember(newMember);
   }
 
-  static Future<List<FamilyMember>> readMembers() async {
+  static Future<List<FamilyMember>> readMembers({String? accountId}) async {
     final db = LocalDatabase.instance;
-    return await db.getAllFamilyMembers();
+    if (accountId == null) {
+      return [];
+    }
+    return await db.getFamilyMembersForCurrentAccount(accountId);
   }
 
   static Future<void> removeMember(String memberId) async {
@@ -37,6 +42,14 @@ class FamilyStorage {
     for (final member in members) {
       await db.updateFamilyMember(member);
     }
+  }
+
+  static String _createFamilyId() {
+    final rand =
+        (DateTime.now().microsecond % 10000).toRadixString(36).toUpperCase();
+    final time =
+        DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
+    return 'FAM-$time-$rand';
   }
 
   static String _createMemberId() {

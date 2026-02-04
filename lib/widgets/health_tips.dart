@@ -118,7 +118,7 @@ class HealthTips extends StatelessWidget {
                                 vertical: AppSpacing.xs,
                               ),
                               decoration: BoxDecoration(
-                                color: categoryColor.withOpacity(0.2),
+                                color: categoryColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(
                                     AppSpacing.radiusFull),
                               ),
