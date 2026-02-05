@@ -11,6 +11,7 @@ class FamilyStorage {
     String? familyId,
   }) async {
     final db = LocalDatabase.instance;
+    // Don't normalize here - let insertFamilyMember handle normalization
     final newMember = FamilyMember(
       memberId: _createMemberId(),
       familyId: familyId ?? _createFamilyId(),
@@ -24,8 +25,12 @@ class FamilyStorage {
     await db.insertFamilyMember(newMember);
   }
 
-  static Future<List<FamilyMember>> readMembers({String? accountId}) async {
+  static Future<List<FamilyMember>> readMembers(
+      {String? accountId, String? memberId}) async {
     final db = LocalDatabase.instance;
+    if (memberId != null && memberId.isNotEmpty) {
+      return await db.getFamilyMembersForMemberId(memberId);
+    }
     if (accountId == null) {
       return [];
     }

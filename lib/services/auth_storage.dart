@@ -75,7 +75,7 @@ class AuthStorage {
       final dbInstance = await db.database;
       final accountRows = await dbInstance.query(
         'accounts',
-        where: 'emailOrPhone = ? OR emailOrPhone = ?',
+        where: 'email = ? AND phone = ?',
         whereArgs: [trimmedEmail.toLowerCase(), trimmedMobile],
       );
 
@@ -109,11 +109,18 @@ class AuthStorage {
         );
       }
 
+      final displayName = member.name.trim().isNotEmpty
+          ? member.name
+          : (member.email?.trim().isNotEmpty ?? false)
+              ? member.email!
+              : (member.phone?.trim().isNotEmpty ?? false)
+                  ? member.phone!
+                  : 'User';
       final session = Session(
         userId: account.accountId, // For backward compatibility
         accountId: account.accountId,
         email: member.email ?? '',
-        name: member.name,
+        name: displayName,
         mobile: member.phone ?? '',
         memberId: member.memberId,
       );
@@ -225,7 +232,12 @@ class AuthStorage {
       String? accountId;
       try {
         // Try to activate a pending member first
-        accountId = await db.signup(trimmedEmail, trimmedMobile, hashedPassword);
+        accountId = await db.signup(
+          trimmedName,
+          trimmedEmail,
+          trimmedMobile,
+          hashedPassword,
+        );
       } on Exception catch (e) {
         if (e.toString().contains('Account already exists')) {
           return (
@@ -235,7 +247,8 @@ class AuthStorage {
           );
         }
         // Other exceptions during signup attempt should be reported.
-        developer.log('Error during signup activation: $e', name: 'AuthStorage');
+        developer.log('Error during signup activation: $e',
+            name: 'AuthStorage');
         return (
           ok: false,
           session: null,
@@ -244,44 +257,33 @@ class AuthStorage {
       }
 
       if (accountId == null) {
-        // No pending member found, so create a new user from scratch.
-        final familyId = _generateFamilyId();
-        final memberId = _generateMemberId();
-        accountId = _generateAccountId();
-
-        // Create family member
-        final member = FamilyMember(
-          memberId: memberId,
-          familyId: familyId,
-          name: trimmedName,
-          relation: 'Self',
-          email: trimmedEmail,
-          phone: trimmedMobile,
-          hasAccount: true,
+        return (
+          ok: false,
+          session: null,
+          message:
+              'No matching family profile found. Ask the family admin to add you first.'
         );
-        await db.insertFamilyMember(member);
-
-        // Create account
-        final account = Account(
-          accountId: accountId,
-          memberId: memberId,
-          email: trimmedEmail,
-          phone: trimmedMobile,
-          passwordHash: hashedPassword,
-        );
-        await db.createAccount(account);
       }
 
       // If we have an accountId either from activation or creation, create session.
       final account = await db.getAccountById(accountId);
       final member = await db.getFamilyMemberById(account!.memberId);
+      if (member != null && member.name.trim().isEmpty && trimmedName.isNotEmpty) {
+        await db.updateFamilyMember(member.copyWith(name: trimmedName));
+      }
+      final updatedMember =
+          await db.getFamilyMemberById(account.memberId);
+      final displayName =
+          (updatedMember?.name.trim().isNotEmpty ?? false)
+              ? updatedMember!.name
+              : trimmedName;
 
       final session = Session(
         userId: accountId,
         accountId: accountId,
-        email: member?.email ?? trimmedEmail,
-        name: member?.name ?? trimmedName,
-        mobile: member?.phone ?? trimmedMobile,
+        email: updatedMember?.email ?? trimmedEmail,
+        name: displayName,
+        mobile: updatedMember?.phone ?? trimmedMobile,
         memberId: account.memberId,
       );
       await _saveSession(session);

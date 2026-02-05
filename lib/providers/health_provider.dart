@@ -1,21 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/health_profile.dart';
 import '../services/health_storage.dart';
+import 'auth_provider.dart';
 
 final healthProfileProvider =
     StateNotifierProvider<HealthProfileNotifier, AsyncValue<HealthProfile>>(
         (ref) {
-  return HealthProfileNotifier();
+  final authState = ref.watch(authProvider);
+  return HealthProfileNotifier(authState.value?.memberId);
 });
 
 class HealthProfileNotifier extends StateNotifier<AsyncValue<HealthProfile>> {
-  HealthProfileNotifier() : super(const AsyncValue.loading()) {
+  final String? memberId;
+
+  HealthProfileNotifier(this.memberId) : super(const AsyncValue.loading()) {
     _loadProfile();
   }
 
   Future<void> _loadProfile() async {
     try {
-      final profile = await HealthStorage.getProfile();
+      final currentMemberId = memberId;
+      if (currentMemberId == null || currentMemberId.isEmpty) {
+        state = AsyncValue.data(HealthProfile());
+        return;
+      }
+      final profile = await HealthStorage.getProfile(memberId: currentMemberId);
       state = AsyncValue.data(profile);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -24,7 +33,15 @@ class HealthProfileNotifier extends StateNotifier<AsyncValue<HealthProfile>> {
 
   Future<void> updateProfile(HealthProfile profile) async {
     try {
-      await HealthStorage.saveProfile(profile);
+      final currentMemberId = memberId;
+      if (currentMemberId == null || currentMemberId.isEmpty) {
+        state = AsyncValue.data(HealthProfile());
+        return;
+      }
+      await HealthStorage.saveProfile(
+        memberId: currentMemberId,
+        profile: profile,
+      );
       state = AsyncValue.data(profile);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

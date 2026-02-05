@@ -13,7 +13,7 @@ class SplashScreen extends ConsumerWidget {
       next.when(
         data: (session) {
           if (session != null) {
-            context.go('/tabs');
+            context.go('/home');
           } else {
             context.go('/login');
           }

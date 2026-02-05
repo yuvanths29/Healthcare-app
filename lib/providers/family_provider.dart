@@ -10,14 +10,17 @@ final familyMembersProvider = StateNotifierProvider<FamilyMembersNotifier,
   final authState = ref.watch(authProvider);
   return FamilyMembersNotifier(
     accountId: authState.value?.accountId,
+    memberId: authState.value?.memberId,
   );
 });
 
 class FamilyMembersNotifier
     extends StateNotifier<AsyncValue<List<FamilyMember>>> {
   final String? accountId;
+  final String? memberId;
 
-  FamilyMembersNotifier({this.accountId}) : super(const AsyncValue.loading()) {
+  FamilyMembersNotifier({this.accountId, this.memberId})
+      : super(const AsyncValue.loading()) {
     _loadMembers();
   }
 
@@ -50,6 +53,13 @@ class FamilyMembersNotifier
       final db = LocalDatabase.instance;
       final currentMember = await db.getFamilyMemberById(loggedInMemberId);
       familyId = currentMember?.familyId;
+      if (familyId == null || familyId!.isEmpty) {
+        final generatedFamilyId = _createFamilyId();
+        await db.updateFamilyMember(
+          currentMember!.copyWith(familyId: generatedFamilyId),
+        );
+        familyId = generatedFamilyId;
+      }
     }
 
     await FamilyStorage.addMember(
@@ -78,10 +88,21 @@ class FamilyMembersNotifier
 
   Future<void> _loadMembers() async {
     try {
-      final members = await FamilyStorage.readMembers(accountId: accountId);
+      final members = await FamilyStorage.readMembers(
+        accountId: accountId,
+        memberId: memberId,
+      );
       state = AsyncValue.data(members);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
+  }
+
+  String _createFamilyId() {
+    final rand =
+        (DateTime.now().microsecond % 10000).toRadixString(36).toUpperCase();
+    final time =
+        DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
+    return 'FAM-$time-$rand';
   }
 }

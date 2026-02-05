@@ -6,13 +6,14 @@ import 'package:sqflite/sqflite.dart';
 
 import '../models/account.dart';
 import '../models/family_member.dart';
+import '../models/health_profile.dart';
 
 /// Result of checking if an account exists
 enum AccountCheckResult { exists, pending, notFound }
 
 class LocalDatabase {
   static const _databaseName = 'healthcare_app.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 5;
 
   static final LocalDatabase instance = LocalDatabase._privateConstructor();
   Database? _database;
@@ -30,12 +31,18 @@ class LocalDatabase {
   Future<AccountCheckResult> checkAccountExists(
       String email, String phone) async {
     final db = await database;
+    final normalizedEmail = _normalizeEmail(email);
+    final normalizedPhone = _normalizePhone(phone);
+
+    if (normalizedEmail == null || normalizedPhone == null) {
+      return AccountCheckResult.notFound;
+    }
 
     // Check if account with this email/phone exists
     final accountRows = await db.query(
       'accounts',
-      where: 'email = ? OR phone = ? OR emailOrPhone = ? OR emailOrPhone = ?',
-      whereArgs: [email, phone, email, phone],
+      where: 'email = ? AND phone = ?',
+      whereArgs: [normalizedEmail, normalizedPhone],
     );
     if (accountRows.isNotEmpty) {
       return AccountCheckResult.exists;
@@ -44,8 +51,8 @@ class LocalDatabase {
     // Check if pending family member with this email/phone exists
     final memberRows = await db.query(
       'family_members',
-      where: '(email = ? OR phone = ?) AND hasAccount = 0',
-      whereArgs: [email, phone],
+      where: 'email = ? AND (phone IS NULL OR phone = ?) AND hasAccount = 0',
+      whereArgs: [normalizedEmail, normalizedPhone],
     );
     if (memberRows.isNotEmpty) {
       return AccountCheckResult.pending;
@@ -224,30 +231,85 @@ class LocalDatabase {
   /// PRIMARY METHOD: Get family members for current account
   /// Finds current user's memberId from accountId, gets their familyId,
   /// and returns ALL family_members with same familyId EXCEPT current user
-  Future<List<FamilyMember>> getFamilyMembersForCurrentAccount(String currentAccountId) async {
+  Future<List<FamilyMember>> getFamilyMembersForCurrentAccount(
+      String currentAccountId) async {
     final db = await database;
-    final personRows = await db.query('accounts', columns: ['memberId'], where: 'accountId = ?', whereArgs: [currentAccountId]);
+    final personRows = await db.query('accounts',
+        columns: ['memberId'],
+        where: 'accountId = ?',
+        whereArgs: [currentAccountId]);
     if (personRows.isEmpty) return [];
     final currentMemberId = personRows.first['memberId'] as String;
-    final familyRows = await db.query('family_members', columns: ['familyId'], where: 'memberId = ?', whereArgs: [currentMemberId]);
-    final familyId = familyRows.isNotEmpty ? familyRows.first['familyId'] as String : null;
+    final familyRows = await db.query('family_members',
+        columns: ['familyId'],
+        where: 'memberId = ?',
+        whereArgs: [currentMemberId]);
+    final familyId =
+        familyRows.isNotEmpty ? familyRows.first['familyId'] as String? : null;
     if (familyId == null) return [];
-    final rows = await db.query('family_members', where: 'familyId = ? AND memberId != ?', whereArgs: [familyId, currentMemberId]);
+    final rows = await db.query('family_members',
+        where: 'familyId = ? AND memberId != ?',
+        whereArgs: [familyId, currentMemberId]);
     return rows.map((r) => FamilyMember.fromMap(r)).toList();
+  }
+
+  /// PRIMARY METHOD: Get family members for current memberId
+  /// Returns ALL family_members with same familyId EXCEPT current user
+  Future<List<FamilyMember>> getFamilyMembersForMemberId(
+      String currentMemberId) async {
+    final db = await database;
+    final familyRows = await db.query('family_members',
+        columns: ['familyId'],
+        where: 'memberId = ?',
+        whereArgs: [currentMemberId]);
+    final familyId =
+        familyRows.isNotEmpty ? familyRows.first['familyId'] as String? : null;
+    print(
+        'family_fetch: memberId=$currentMemberId familyId=$familyId');
+    if (familyId == null || familyId.isEmpty) return [];
+    final rows = await db.query('family_members',
+        where: 'familyId = ? AND memberId != ?',
+        whereArgs: [familyId, currentMemberId]);
+    print('family_fetch: members=$rows');
+    return rows.map((r) => FamilyMember.fromMap(r)).toList();
+  }
+
+  Future<HealthProfile> getHealthProfileByMemberId(String memberId) async {
+    final db = await database;
+    final rows = await db.query(
+      'health_profiles',
+      where: 'memberId = ?',
+      whereArgs: [memberId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return HealthProfile();
+    return HealthProfile.fromJson(rows.first);
   }
 
   Future<void> insertFamilyMember(FamilyMember member,
       {String? currentAccountId}) async {
     final db = await database;
-    FamilyMember memberToInsert = member;
+    String familyId = member.familyId;
 
     // If currentAccountId provided, ensure member has same familyId
     if (currentAccountId != null) {
-      final familyId = await _getFamilyIdForAccount(currentAccountId);
-      if (familyId != null && member.familyId.isEmpty) {
-        memberToInsert = member.copyWith(familyId: familyId);
+      final resolvedFamilyId = await _getFamilyIdForAccount(currentAccountId);
+      if (resolvedFamilyId != null && member.familyId.isEmpty) {
+        familyId = resolvedFamilyId;
       }
     }
+
+    // Normalize email and phone - creates new instance to allow NULL values
+    final memberToInsert = FamilyMember(
+      memberId: member.memberId,
+      familyId: familyId,
+      name: member.name,
+      relation: member.relation,
+      parentId: member.parentId,
+      email: _normalizeEmail(member.email),
+      phone: _normalizePhone(member.phone),
+      hasAccount: member.hasAccount,
+    );
 
     await db.insert(
       'family_members',
@@ -256,42 +318,87 @@ class LocalDatabase {
     );
   }
 
-  Future<String?> signup(String email, String phone, String password) async {
-    if (email.isEmpty || phone.isEmpty) {
-      throw Exception('Email and phone required');
-    }
+  Future<String?> signup(
+      String name, String email, String phone, String password) async {
+    final normalizedEmail = _normalizeEmail(email);
+    final normalizedPhone = _normalizePhone(phone);
+    final normalizedName = name.trim();
 
     final db = await database;
     return await db.transaction((txn) async {
-      // check accounts WHERE email=? OR phone=? -> exists error
+      final allMembers = await txn.query('family_members');
+      print('signup: family_members rows=$allMembers');
+      print(
+          'signup: lookup email="$normalizedEmail" phone="$normalizedPhone"');
+
+      // check accounts WHERE email=? AND phone=? -> exists error
       final existing = await txn.query(
         'accounts',
-        where: 'email = ? OR phone = ?',
-        whereArgs: [email, phone],
+        where: 'email = ? AND phone = ?',
+        whereArgs: [normalizedEmail, normalizedPhone],
       );
       if (existing.isNotEmpty) {
         throw Exception('Account already exists');
       }
 
-      // find family_members WHERE email=? AND phone=? -> activate
-      final memberRows = await txn.query(
-        'family_members',
-        where: 'email = ? AND phone = ? AND hasAccount = 0',
-        whereArgs: [email, phone],
-      );
-      if (memberRows.isEmpty) {
-        return null;
+      String whereClause;
+      List<Object?> whereArgs;
+      if ((normalizedEmail?.isNotEmpty ?? false) &&
+          (normalizedPhone?.isNotEmpty ?? false)) {
+        whereClause = 'email = ? AND phone = ?';
+        whereArgs = [normalizedEmail, normalizedPhone];
+      } else if (normalizedEmail?.isNotEmpty ?? false) {
+        whereClause = 'email = ? AND phone IS NULL';
+        whereArgs = [normalizedEmail];
+      } else {
+        whereClause = 'phone = ? AND email IS NULL';
+        whereArgs = [normalizedPhone];
       }
 
-      final memberId = memberRows.first['memberId'] as String;
+      final memberRows = await txn.query(
+        'family_members',
+        where: whereClause,
+        whereArgs: whereArgs,
+      );
+
+      String memberId;
+      if (memberRows.length == 1) {
+        memberId = memberRows.first['memberId'] as String;
+        final existingName = memberRows.first['name'] as String? ?? '';
+        if (existingName.trim().isEmpty && normalizedName.isNotEmpty) {
+          await txn.update(
+            'family_members',
+            {'name': normalizedName},
+            where: 'memberId = ?',
+            whereArgs: [memberId],
+          );
+        }
+      } else if (memberRows.length > 1) {
+        throw Exception('Multiple matching family members found');
+      } else {
+        memberId = _generateId();
+        await txn.insert('family_members', {
+          'memberId': memberId,
+          'familyId': null,
+          'name': normalizedName.isNotEmpty ? normalizedName : '',
+          'relation': 'Self',
+          'parentId': null,
+          'phone': normalizedPhone,
+          'email': normalizedEmail,
+          'hasAccount': 0,
+        });
+      }
+
       final accountId = _generateId();
 
       await txn.insert('accounts', {
         'accountId': accountId,
         'memberId': memberId,
-        'emailOrPhone': email,
-        'email': email,
-        'phone': phone,
+        'emailOrPhone': (normalizedEmail?.isNotEmpty ?? false)
+            ? normalizedEmail
+            : (normalizedPhone ?? ''),
+        'email': normalizedEmail,
+        'phone': normalizedPhone,
         'passwordHash': password,
       });
 
@@ -314,6 +421,19 @@ class LocalDatabase {
       member.toMap(),
       where: 'memberId = ?',
       whereArgs: [member.memberId],
+    );
+  }
+
+  Future<void> upsertHealthProfile(
+      String memberId, HealthProfile profile) async {
+    final db = await database;
+    await db.insert(
+      'health_profiles',
+      {
+        'memberId': memberId,
+        ...profile.toJson(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -441,12 +561,24 @@ class LocalDatabase {
     }
   }
 
+  String? _normalizeEmail(String? email) {
+    if (email == null) return null;
+    final trimmed = email.trim().toLowerCase();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _normalizePhone(String? phone) {
+    if (phone == null) return null;
+    final trimmed = phone.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   Future<void> _onCreate(Database db, int version) async {
     // Create family_members table (version 3 schema)
     await db.execute('''
       CREATE TABLE family_members (
         memberId TEXT PRIMARY KEY,
-        familyId TEXT NOT NULL,
+        familyId TEXT,
         name TEXT NOT NULL,
         relation TEXT NOT NULL,
         parentId TEXT,
@@ -474,6 +606,17 @@ class LocalDatabase {
         FOREIGN KEY(memberId) REFERENCES family_members(memberId) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE health_profiles (
+        memberId TEXT PRIMARY KEY,
+        height TEXT,
+        weight TEXT,
+        allergies TEXT,
+        medicalConditions TEXT,
+        FOREIGN KEY(memberId) REFERENCES family_members(memberId) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -496,7 +639,7 @@ class LocalDatabase {
           await txn.execute('''
             CREATE TABLE family_members_new (
               memberId TEXT PRIMARY KEY,
-              familyId TEXT NOT NULL,
+              familyId TEXT,
               name TEXT NOT NULL,
               relation TEXT NOT NULL,
               parentId TEXT,
@@ -573,6 +716,52 @@ class LocalDatabase {
           }
         }
       }
+    }
+
+    // Migration from v3 to v4: Add health_profiles table
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS health_profiles (
+          memberId TEXT PRIMARY KEY,
+          height TEXT,
+          weight TEXT,
+          allergies TEXT,
+          medicalConditions TEXT,
+          FOREIGN KEY(memberId) REFERENCES family_members(memberId) ON DELETE CASCADE
+        )
+      ''');
+    }
+
+    // Migration from v4 to v5: make familyId nullable
+    if (oldVersion < 5) {
+      await db.transaction((txn) async {
+        await txn.execute('''
+          CREATE TABLE family_members_new (
+            memberId TEXT PRIMARY KEY,
+            familyId TEXT,
+            name TEXT NOT NULL,
+            relation TEXT NOT NULL,
+            parentId TEXT,
+            phone TEXT,
+            email TEXT,
+            hasAccount INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY(parentId) REFERENCES family_members(memberId) ON DELETE SET NULL
+          )
+        ''');
+
+        await txn.execute('''
+          INSERT INTO family_members_new
+          SELECT memberId, familyId, name, relation, parentId, phone, email, hasAccount
+          FROM family_members
+        ''');
+
+        await txn.execute('DROP TABLE family_members');
+        await txn.execute(
+            'ALTER TABLE family_members_new RENAME TO family_members');
+        await txn.execute('''
+          CREATE INDEX idx_family_members_familyId ON family_members(familyId)
+        ''');
+      });
     }
   }
 }

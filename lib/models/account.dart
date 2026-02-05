@@ -1,15 +1,13 @@
 class Account {
   final String accountId;
   final String memberId;
-  final String email;
-  final String phone;
+  final String emailOrPhone;
   final String passwordHash;
 
   Account({
     required this.accountId,
     required this.memberId,
-    required this.email,
-    required this.phone,
+    required this.emailOrPhone,
     required this.passwordHash,
   });
 
@@ -17,8 +15,7 @@ class Account {
     return Account(
       accountId: map['accountId'] as String? ?? '',
       memberId: map['memberId'] as String? ?? '',
-      email: map['email'] as String? ?? '',
-      phone: map['phone'] as String? ?? '',
+      emailOrPhone: map['emailOrPhone'] as String? ?? '',
       passwordHash: map['passwordHash'] as String? ?? '',
     );
   }
@@ -26,15 +23,13 @@ class Account {
   Account copyWith({
     String? accountId,
     String? memberId,
-    String? email,
-    String? phone,
+    String? emailOrPhone,
     String? passwordHash,
   }) {
     return Account(
       accountId: accountId ?? this.accountId,
       memberId: memberId ?? this.memberId,
-      email: email ?? this.email,
-      phone: phone ?? this.phone,
+      emailOrPhone: emailOrPhone ?? this.emailOrPhone,
       passwordHash: passwordHash ?? this.passwordHash,
     );
   }
@@ -42,12 +37,11 @@ class Account {
   Map<String, dynamic> toMap() => {
         'accountId': accountId,
         'memberId': memberId,
-        'email': email,
-        'phone': phone,
+        'emailOrPhone': emailOrPhone,
         'passwordHash': passwordHash,
       };
 
   @override
   String toString() =>
-      'Account(accountId: $accountId, memberId: $memberId, email: $email, phone: $phone)';
+      'Account(accountId: $accountId, memberId: $memberId, emailOrPhone: $emailOrPhone)';
 }

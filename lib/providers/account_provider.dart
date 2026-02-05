@@ -56,8 +56,7 @@ class AccountNotifier extends StateNotifier<AsyncValue<Account?>> {
       final account = Account(
         accountId: accountId,
         memberId: memberId,
-        email: emailOrPhone,
-        phone: '',
+        emailOrPhone: emailOrPhone,
         passwordHash: hashedPassword,
       );
 
